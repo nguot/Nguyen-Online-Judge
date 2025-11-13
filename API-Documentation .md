@@ -68,7 +68,38 @@
 |------|---------|
 | **Role** | `"Admin"`, `"Normal_User"`, `"Pro_User"`, `"Author"`, `"Tester"`, `"Participants"`, `"Group_Admin"`, `"Group_Member"` |
 | **ScopeType** | `"System"`, `"Contest"`, `"Problem"`, `"Group"` |
-| **Permission** | `"contest:schedule"`, `"contest:invite"`, `"contest:submit_review"`, `"contest:create"`, `"contest:set_unrated"`, `"contest:edit"`, `"contest:participate"`, `"contest:testing"`, `"contest:rate"`, `"contest:update_score"`, `"problem:view"`, `"problem:edit"`, `"problem:delete"`, `"problem:create"`, `"group:delete"`, `"group:create_contest"`, `"group:invite"`, `"contest:tester_comment"`, `"contest:participants_comment"`, `"user:delete"`, `"user:set_rating"`, `"user:grant"`, `"user:revoke"` |
+### Contest Permissions
+- `contest:schedule`
+- `contest:invite`
+- `contest:submit_review`
+- `contest:create`
+- `contest:set_unrated`
+- `contest:edit`
+- `contest:participate`
+- `contest:testing`
+- `contest:rate`
+- `contest:update_score`
+- `contest:tester_comment`
+- `contest:participants_comment`
+
+### Problem Permissions
+- `problem:view`
+- `problem:edit`
+- `problem:delete`
+- `problem:create`
+
+### Group Permissions
+- `group:delete`
+- `group:create_contest`
+- `group:invite`
+- `group:delete` <!-- duplicated? -->
+
+### User Permissions
+- `user:delete`
+- `user:set_rating`
+- `user:grant`
+- `user:revoke`
+
 
 ---
 
@@ -338,12 +369,12 @@
 
 ### 3.10 Dashboard realtime (per contest, REST-only)
 
-**Redis ZSET (đơn giản):**
+**Redis ZSET :**
 ```
-lb:{contest_id}  // ZSET: member = user_id, score = score * 1e6 - penalty
+leaderboard:{contest_id}  // ZSET: member = user_id, score = score * 1e6 - penalty
 ```
 - Xếp hạng theo `ZREVRANK` (điểm cao hơn đứng trước; cùng điểm thì penalty nhỏ hơn vì bị trừ).
-- Đọc top/window bằng `ZREVRANGE` theo `offset/limit`.
+- Đọc top/window bằng `ZREVRANGE` theo `offset(limit)`.
 
 **API (permission: `contest:view` cho read; `contest:update_core` cho write)**
 
@@ -358,13 +389,13 @@ _Read:_
   **Body**: `DashboardGroupRequestDto` → Data: như trên nhưng **chỉ lọc theo group** (nếu không truyền `group_id` sẽ lấy group mặc định/của caller).
 
 _Write:_
-- **POST** `/api/v1/contest/{contest_id}/leaderboard/update-score` _(permission: `contest:score:update`)_  
+- **POST** `/api/v1/contest/{contest_id}/leaderboard/update-score`   
   **Body** `{ "user_id": number, "score": number, "penalty": number }` → Data: `{ "updated": true }`
 
-- **POST** `/api/v1/contest/{contest_id}/leaderboard/batch-update` _(permission: `contest:score:update`)_  
+- **POST** `/api/v1/contest/{contest_id}/leaderboard/batch-update` 
   **Body** `{ "items": [ { "user_id": number, "score": number, "penalty": number }, ... ] }` → Data: `{ "updated": 42 }`
 
-> ***Ghi chú***: FE **polling** định kỳ endpoint `/dashboard/page` với `offset/limit` để cập nhật UI; 
+> ***Ghi chú***: FE **polling** định kỳ endpoint `/dashboard/page` với `offset(limit)` để cập nhật UI; 
 ---
 
 ## 4) Admin API
