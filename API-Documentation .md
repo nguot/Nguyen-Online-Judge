@@ -144,9 +144,6 @@
 ---
 
 ## 1) Catalog: Entities (map 1-1 với DB)
-
-> Field name **đúng như DB**.
-
 ### 1.1 SQL
 - **user_details**: `{ user_id, user_name, email, password, info }`
 - **auth_refresh_token**: `{ token_id, user_id, refresh_token, issued_at, expired_at, revoked, ip_addr }`
@@ -274,10 +271,6 @@
 ---
 
 ## 3) Endpoints
-
-> **Tất cả list/search → `POST .../search`** với body `PageRequestDto<Filter>`  
-> **GET** chỉ dành cho **lấy chi tiết theo ID**.  
-> **Toàn bộ cập nhật/sửa → `POST`**.
 
 ### 3.1 Auth
 - **POST** `/api/v1/auth/register` — Body: `RegisterRequestDto` → Data: `RegisterResponseDto`
@@ -416,7 +409,7 @@ _Write:_
 
 ---
 
-## 5) Ví dụ mẫu đúng chuẩn
+## 5) Ví dụ
 
 ### 5.1 Search Problems (filter theo author + tags, phân trang)
 **POST** `/api/v1/problems/search`  
