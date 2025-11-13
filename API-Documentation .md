@@ -179,8 +179,6 @@
 ## 2) Catalog: DTOs (request/response)
 
 > **InputDto** = request body. **ResponseDto** = phần `data` trong CommonResponse.  
-> **Đổi `*PatchRequestDto` → `*UpdateRequestDto`** để thống nhất với `POST`.
-
 ### 2.1 Auth
 - **RegisterRequestDto**: `{ user_name, email, password }`
 - **RegisterResponseDto**: `{ user_id, user_name, email }`
