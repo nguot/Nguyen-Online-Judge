@@ -1,600 +1,297 @@
-\# \*\*Database Schema – SQL + MongoDB – Nguyên Online Judge\*\*
-
-
-
-\## Kafka Topic
-
-\- \*\*contest.draft.proposal\*\* – topic dùng để đẩy proposal contest dạng Draft vào queue xử lý.
-
+## Kafka Topic
+- **contest.draft.proposal** – topic dùng để đẩy proposal contest dạng Draft vào queue xử lý.
 ---
 
-
-
-\## \*\*role\*\*
-
+## **role**
 | Trường    | Kiểu      | Mô tả |
-
 |-----------|-----------|-------|
-
-| role\_id   | BIGINT PK | ID role |
-
-| role\_name | ENUM | {Admin, Normal\_User, Pro\_User, Author, Tester, Participants, Group\_Admin, Group\_Member} |
-
-
+| role_id   | BIGINT PK | ID role |
+| role_name | ENUM | {Admin, Normal_User, Pro_User, Author, Tester, Participants, Group_Admin, Group_Member} |
 
 ---
 
-
-
-\## \*\*role\_user\*\*
-
+## **role_user**
 | Trường    | Kiểu | Mô tả |
-
 |-----------|------|-------|
-
-| role\_id   | BIGINT FK | Role |
-
-| user\_id   | BIGINT FK | User |
-
-| scope\_id  | BIGINT/NULL | null hoặc contest\_id/problem\_id/group\_id |
-
-| scope\_type | ENUM("System","Contest","Problem","Group") | Phạm vi role |
-
-
+| role_id   | BIGINT FK | Role |
+| user_id   | BIGINT FK | User |
+| scope_id  | BIGINT/NULL | null hoặc contest_id/problem_id/group_id |
+| scope_type | ENUM("System","Contest","Problem","Group") | Phạm vi role |
 
 ---
 
-
-
-\## \*\*role\_permission\*\*
-
+## **role_permission**
 | Trường        | Kiểu      | Mô tả |
-
 |----------------|-----------|-------|
-
-| role\_id       | BIGINT FK | Role |
-
-| permission\_id | BIGINT FK | Quyền |
-
-
+| role_id       | BIGINT FK | Role |
+| permission_id | BIGINT FK | Quyền |
 
 ---
 
-
-
-\## \*\*permission\*\*
-
+## **permission**
 | Trường          | Kiểu      | Mô tả |
-
 |------------------|-----------|-------|
+| permission_id    | BIGINT PK | ID permission |
+| permission_name  | VARCHAR   | Tên quyền |
 
-| permission\_id    | BIGINT PK | ID permission |
-
-| permission\_name  | VARCHAR   | Tên quyền |
-
-
-
-\### \*\*Danh sách permission\*\*
-
-\* contest:schedule
-
-\* contest:invite
-
-\* contest:submit\_review
-
-\* contest:create
-
-\* contest:set\_unrated
-
-\* contest:edit
-
-\* contest:participate
-
-\* contest:testing
-
-\* contest:rate
-
-\* contest:update\_score
-
-\* problem:view
-
-\* problem:edit
-
-\* problem:delete
-
-\* problem:create
-
-\* group:delete
-
-\* group:create\_contest
-
-\* group:invite
-
-\* contest:tester\_comment
-
-\* contest:participants\_comment
-
-\* user:delete
-
-\* user:set\_rating
-
-\* user:grant
-
-\* user:revoke
-
-
-
+### **Danh sách permission**
+* contest:schedule
+* contest:invite
+* contest:submit_review
+* contest:create
+* contest:set_unrated
+* contest:edit
+* contest:participate
+* contest:testing
+* contest:rate
+* contest:update_score
+* problem:view
+* problem:edit
+* problem:delete
+* problem:create
+* group:delete
+* group:create_contest
+* group:invite
+* contest:tester_comment
+* contest:participants_comment
+* user:delete
+* user:set_rating
+* user:grant
+* user:revoke
 
 
 ---
 
-
-
-\## \*\*user\_details\*\*
-
+## **user_details**
 | Trường   | Kiểu      | Mô tả |
-
 |----------|-----------|-------|
-
-| user\_id  | BIGINT PK | ID user |
-
-| user\_name | VARCHAR  | Tài khoản |
-
+| user_id  | BIGINT PK | ID user |
+| user_name | VARCHAR  | Tài khoản |
 | email    | VARCHAR   | Email |
-
 | password | VARCHAR   | Hash mật khẩu |
-
 | info     | JSON/TEXT | Thông tin bổ sung |
 
-
-
 ---
 
-
-
-\## \*\*auth\_refresh\_token\*\*
-
+## **auth_refresh_token**
 | Trường        | Kiểu      | Mô tả |
-
 |---------------|-----------|-------|
-
-| token\_id      | BIGINT PK | ID token |
-
-| user\_id       | BIGINT FK | User |
-
-| refresh\_token | VARCHAR   | Refresh token |
-
-| issued\_at     | DATETIME  | Thời điểm tạo |
-
-| expired\_at    | DATETIME  | Hết hạn |
-
+| token_id      | BIGINT PK | ID token |
+| user_id       | BIGINT FK | User |
+| refresh_token | VARCHAR   | Refresh token |
+| issued_at     | DATETIME  | Thời điểm tạo |
+| expired_at    | DATETIME  | Hết hạn |
 | revoked       | BOOLEAN   | Thu hồi? |
-
-| ip\_addr       | VARCHAR   | IP phát hành |
-
-
+| ip_addr       | VARCHAR   | IP phát hành |
 
 ---
 
-
-
-\## \*\*contest\*\*
-
+## **contest**
 | Trường        | Kiểu      | Mô tả |
-
 |---------------|-----------|-------|
-
-| contest\_id    | BIGINT PK | ID contest |
-
+| contest_id    | BIGINT PK | ID contest |
 | title         | VARCHAR   | Tên contest |
-
 | description   | TEXT      | Mô tả |
-
-| start\_time    | DATETIME  | Bắt đầu |
-
+| start_time    | DATETIME  | Bắt đầu |
 | duration      | INT       | Phút |
-
-| contest\_status | ENUM("Upcoming","Running","Finished") | Trạng thái |
-
-| contest\_type  | ENUM("Draft","Gym","Official") | Loại |
-
+| contest_status | ENUM("Upcoming","Running","Finished") | Trạng thái |
+| contest_type  | ENUM("Draft","Gym","Official") | Loại |
 | author        | BIGINT FK | Người tạo |
-
 | rated         | BOOLEAN DEFAULT FALSE | Tính rating |
-
 | visibility    | ENUM("public","private") DEFAULT "private" | Hiển thị |
-
-| group\_id      | BIGINT FK | Group |
-
-
+| group_id      | BIGINT FK | Group |
 
 ---
 
-
-
-\## \*\*submission\_result\*\*
-
+## **submission_result**
 | Trường       | Kiểu |
-
 |--------------|------|
-
-| user\_id      | BIGINT |
-
-| contest\_id   | BIGINT |
-
+| user_id      | BIGINT |
+| contest_id   | BIGINT |
 | result       | ENUM("SKIPPED","PENDING","AC","WA","TLE","MLE","CE") |
-
-| submission\_id | STRING (Mongo) |
-
-| status       | ENUM("IN\_CONTEST","PRACTICE") |
-
-| created\_at   | DATETIME |
-
-
+| submission_id | STRING (Mongo) |
+| status       | ENUM("IN_CONTEST","PRACTICE") |
+| created_at   | DATETIME |
 
 ---
 
-
-
-\## \*\*contest\_problem\*\*
-
+## **contest_problem**
 | Trường      | Kiểu |
-
 |-------------|------|
-
-| contest\_id  | BIGINT |
-
-| problem\_id  | STRING (Mongo) |
-
-
+| contest_id  | BIGINT |
+| problem_id  | STRING (Mongo) |
 
 ---
 
-
-
-\## \*\*contest\_registration\*\*
-
+## **contest_registration**
 | Trường      | Kiểu |
-
 |-------------|------|
-
-| contest\_id  | BIGINT |
-
-| user\_id     | BIGINT |
-
-| registered\_at | DATETIME |
-
-
+| contest_id  | BIGINT |
+| user_id     | BIGINT |
+| registered_at | DATETIME |
 
 ---
 
-
-
-\## \*\*contest\_participants\*\*
-
+## **contest_participants**
 | Trường      | Kiểu |
-
 |-------------|------|
-
-| contest\_id  | BIGINT |
-
-| user\_id     | BIGINT |
-
+| contest_id  | BIGINT |
+| user_id     | BIGINT |
 | penalty     | INT |
-
-| total\_score | INT |
-
+| total_score | INT |
 | rank        | INT |
 
-
-
 ---
 
-
-
-\## \*\*contest\_testers\*\*
-
+## **contest_testers**
 | Trường      | Kiểu |
-
 |-------------|------|
-
-| contest\_id  | BIGINT |
-
-| user\_id     | BIGINT |
-
-| total\_score | INT |
-
-
+| contest_id  | BIGINT |
+| user_id     | BIGINT |
+| total_score | INT |
 
 ---
 
-
-
-\## \*\*tester\_feedback\*\*
-
+## **tester_feedback**
 | Trường     | Kiểu |
-
 |------------|-------|
-
-| problem\_id | STRING |
-
-| contest\_id | BIGINT |
-
-| user\_id    | BIGINT |
-
+| problem_id | STRING |
+| contest_id | BIGINT |
+| user_id    | BIGINT |
 | like       | BOOLEAN |
-
-| comment\_id | BIGINT |
-
-
+| comment_id | BIGINT |
 
 ---
 
-
-
-\## \*\*contest\_invitation\*\*
-
+## **contest_invitation**
 | Trường     | Kiểu |
-
 |------------|-------|
-
-| invite\_id  | BIGINT PK |
-
-| contest\_id | BIGINT |
-
-| inviter\_id | BIGINT |
-
-| invitee\_id | BIGINT |
-
+| invite_id  | BIGINT PK |
+| contest_id | BIGINT |
+| inviter_id | BIGINT |
+| invitee_id | BIGINT |
 | status     | ENUM("ACCEPTED","DECLINED","PENDING","EXPIRED") |
 
-
-
 ---
 
-
-
-\## \*\*comment\*\*
-
+## **comment**
 | Trường     | Kiểu |
-
 |------------|-------|
-
-| comment\_id | BIGINT PK |
-
-| user\_id    | BIGINT |
-
+| comment_id | BIGINT PK |
+| user_id    | BIGINT |
 | contents   | TEXT |
-
-| is\_deleted | BOOLEAN |
-
-| parent\_id  | BIGINT |
-
-| source\_id  | BIGINT/STRING |
-
-| type       | ENUM("tester\_comment","official\_comment") |
-
-
+| is_deleted | BOOLEAN |
+| parent_id  | BIGINT |
+| source_id  | BIGINT/STRING |
+| type       | ENUM("tester_comment","official_comment") |
 
 ---
 
-
-
-\## \*\*user\_rating\_history\*\*
-
+## **user_rating_history**
 | Trường     | Kiểu |
-
 |------------|-------|
-
-| user\_id    | BIGINT |
-
-| contest\_id | BIGINT |
-
+| user_id    | BIGINT |
+| contest_id | BIGINT |
 | rating     | INT |
-
 | delta      | INT |
 
-
-
 ---
 
-
-
-\## \*\*user\_friendship\*\*
-
+## **user_friendship**
 | Trường     | Kiểu |
-
 |------------|-------|
-
-| user\_id    | BIGINT |
-
-| friend\_id  | BIGINT |
-
+| user_id    | BIGINT |
+| friend_id  | BIGINT |
 | status     | ENUM("ACCEPTED","BLOCKED") |
 
-
-
 ---
 
-
-
-\## \*\*group\*\*
-
+## **group**
 | Trường      | Kiểu      | Mô tả |
-
 |-------------|-----------|-------|
-
-| group\_id    | BIGINT PK | ID Group |
-
-| group\_name  | VARCHAR   | Tên group |
-
+| group_id    | BIGINT PK | ID Group |
+| group_name  | VARCHAR   | Tên group |
 | description | TEXT      | Mô tả |
-
 | avatar      | VARCHAR   | Ảnh đại diện |
-
-| created\_by  | BIGINT FK | Người tạo |
-
-| created\_at  | DATETIME  | Thời điểm tạo |
-
-
+| created_by  | BIGINT FK | Người tạo |
+| created_at  | DATETIME  | Thời điểm tạo |
 
 ---
 
-
-
-\## \*\*group\_member\*\*
-
+## **group_member**
 | Trường            | Kiểu      | Mô tả |
-
 |-------------------|-----------|-------|
-
-| group\_id          | BIGINT FK | Group |
-
-| user\_id           | BIGINT FK | Thành viên |
-
-| invite\_by\_user\_id | BIGINT    | Người mời |
-
-| joined\_at         | DATETIME  | Thời gian tham gia |
-
-
+| group_id          | BIGINT FK | Group |
+| user_id           | BIGINT FK | Thành viên |
+| invite_by_user_id | BIGINT    | Người mời |
+| joined_at         | DATETIME  | Thời gian tham gia |
 
 ---
 
-
-
-\## \*\*group\_invitation\*\*
-
+## **group_invitation**
 | Trường     | Kiểu      | Mô tả |
-
 |------------|-----------|-------|
-
-| invite\_id  | BIGINT PK | ID lời mời |
-
-| group\_id   | BIGINT FK | Group |
-
-| inviter\_id | BIGINT    | Người mời |
-
-| invitee\_id | BIGINT    | Người nhận |
-
+| invite_id  | BIGINT PK | ID lời mời |
+| group_id   | BIGINT FK | Group |
+| inviter_id | BIGINT    | Người mời |
+| invitee_id | BIGINT    | Người nhận |
 | status     | ENUM("PENDING","ACCEPTED","DECLINED","EXPIRED") | Trạng thái |
 
+## **problem**
 
+```json
+{
+  "problem_id": "ObjectId",              
+  "author_id": "Long",                   
+  "title": "String",                     
+  "description": "String",               
+  "time_limit": "Int32",                 
+  "memory_limit": "Int32",               
 
-\## \*\*problem\*\*
+  "tags": ["String"],                    
 
+  "sample": [                            
+    {
+      "sample_inp": "String",
+      "sample_out": "String"
+    },...
+  ],
 
+  "system_test": [                       
+    {
+      "test_id": "String",               
+      "system_inp": "String",            
+      "system_out": "String"             
+    },...
+  ],
 
+  "score": "Int32",                      
+  "solution": "Binary",                  
+  "tutorial": "String",                  
+  "rating": "Int32"                      
+}
+```
+
+## **submission**
 ```json
 
 {
+  "submission_id": "ObjectId",          
+  "problem_id": "ObjectId",             
+  "user_id": "Long",                   
+  "source_code": "String",             
+  "lang": "String",                    
+  "submit_time": "Date",               
 
-&nbsp; "problem\_id": "ObjectId",              
-
-&nbsp; "author\_id": "Long",                   
-
-&nbsp; "title": "String",                     
-
-&nbsp; "description": "String",               
-
-&nbsp; "time\_limit": "Int32",                 
-
-&nbsp; "memory\_limit": "Int32",               
-
-
-
-&nbsp; "tags": \["String"],                    
-
-
-
-&nbsp; "sample": \[                            
-
-&nbsp;   {
-
-&nbsp;     "sample\_inp": "String",
-
-&nbsp;     "sample\_out": "String"
-
-&nbsp;   },...
-
-&nbsp; ],
-
-
-
-&nbsp; "system\_test": \[                       
-
-&nbsp;   {
-
-&nbsp;     "test\_id": "String",               
-
-&nbsp;     "system\_inp": "String",            
-
-&nbsp;     "system\_out": "String"             
-
-&nbsp;   },...
-
-&nbsp; ],
-
-
-
-&nbsp; "score": "Int32",                      
-
-&nbsp; "solution": "Binary",                  
-
-&nbsp; "tutorial": "String",                  
-
-&nbsp; "rating": "Int32"                      
-
+  "result": [
+    {
+      "test_id": "String",             
+      "inp": "String",                 
+      "out": "String",                 
+      "verdict": "String",             
+      "time": "Int32",                 
+      "memory": "Int32"         
+    },...
+  ]
 }
-
 ```
-
-
-
-\## \*\*submission\*\*
-
-```json
-
-
-
-{
-
-&nbsp; "submission\_id": "ObjectId",          
-
-&nbsp; "problem\_id": "ObjectId",             
-
-&nbsp; "user\_id": "Long",                   
-
-&nbsp; "source\_code": "String",             
-
-&nbsp; "lang": "String",                    
-
-&nbsp; "submit\_time": "Date",               
-
-
-
-&nbsp; "result": \[
-
-&nbsp;   {
-
-&nbsp;     "test\_id": "String",             
-
-&nbsp;     "inp": "String",                 
-
-&nbsp;     "out": "String",                 
-
-&nbsp;     "verdict": "String",             
-
-&nbsp;     "time": "Int32",                 
-
-&nbsp;     "memory": "Int32"         
-
-&nbsp;   },...
-
-&nbsp; ]
-
-}
-
-```
-
-
-
