@@ -12,8 +12,10 @@ public interface AdminUserService {
 
     PageResult<AdminUserItemDto> searchUsers(PageRequestDto<AdminUserFilterDto> request);
 
-    void updateUserRole(Integer userId, UpdateUserRoleRequestDto request);
+    void updateUserRole(Long userId, UpdateUserRoleRequestDto request);
 
-    void updateUserRating(Integer userId, UpdateUserRatingRequestDto request);
+    void updateUserRating(Long userId, UpdateUserRatingRequestDto request);
+    void clearRolePermissions(Integer roleId);
+    void clearRoleUserSystem(Long userId);
 }
 

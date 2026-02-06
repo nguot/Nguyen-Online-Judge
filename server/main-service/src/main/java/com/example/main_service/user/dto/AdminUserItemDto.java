@@ -7,7 +7,7 @@ public class AdminUserItemDto {
     private Long userId;
     private String username;
     private String email;
-    private Long rating;
+    private Integer rating;
     private RoleDto role;
 }
 

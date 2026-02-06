@@ -6,6 +6,6 @@ import java.util.List;
 
 @Data
 public class UpdateRolePermissionRequestDto {
-    private List<Integer> permissionIds;
+    private List<UpdateRolePermissionItem> permissions;
 }
 

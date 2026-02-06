@@ -46,5 +46,31 @@ public interface RoleUserRepo extends CrudRepository<RoleUserEntity, Integer> {
 
     List<RoleUserEntity> findByUserIdAndScopeType(Long userId, RoleUserEntity.ScopeType scopeType);
 
-    void deleteByUserIdAndScopeType(Integer userId, RoleUserEntity.ScopeType scopeType);
+    void deleteByUserIdAndScopeType(Long userId, RoleUserEntity.ScopeType scopeType);
+
+    RoleUserEntity findFirstByUserIdAndScopeType(Long userId, RoleUserEntity.ScopeType scopeType);
+
+    @Query("""
+            SELECT ru.userId
+            FROM RoleUserEntity ru
+            WHERE ru.roleId = :roleId
+              AND ru.scopeType = :scopeType
+              AND ru.scopeId = :scopeId
+            """)
+    List<Long> findUserIdsByRoleAndScope(Integer roleId, RoleUserEntity.ScopeType scopeType, String scopeId);
+
+    @Modifying
+    @Query("""
+            DELETE FROM RoleUserEntity ru
+            WHERE ru.roleId = :roleId
+              AND ru.userId = :userId
+              AND ru.scopeType = :scopeType
+              AND ru.scopeId = :scopeId
+            """)
+    void deleteRoleUser(Integer roleId, Long userId, RoleUserEntity.ScopeType scopeType, String scopeId);
+    List<RoleUserEntity> findByScopeTypeAndScopeId(RoleUserEntity.ScopeType scopeType , String scopeId);
+
+    boolean existsByRoleIdAndUserIdAndScopeTypeAndScopeId(
+            Integer roleId, Long userId, RoleUserEntity.ScopeType scopeType , String scopeId
+    );
 }

@@ -14,14 +14,11 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @NoArgsConstructor
 public class ContestRegistrationResponseDto {
-    @JsonProperty("contest_id")
     private Long contestId;
 
-    @JsonProperty("user_id")
     private Long userId;
 
     private String userName;
 
-    @JsonProperty("registered_at")
     private LocalDateTime registeredAt;
 }

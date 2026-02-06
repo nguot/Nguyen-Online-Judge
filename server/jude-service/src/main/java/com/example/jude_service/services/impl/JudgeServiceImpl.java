@@ -6,6 +6,7 @@ import com.example.jude_service.entities.problem.ProblemEntity;
 import com.example.jude_service.entities.submission.SubmissionInputDto;
 import com.example.jude_service.entities.testcase.TestcaseEntity;
 import com.example.jude_service.enums.ResponseStatus;
+import com.example.jude_service.producer.SubmissionProgressProducer;
 import com.example.jude_service.repo.ProblemRepo;
 import com.example.jude_service.services.JudgeService;
 import lombok.RequiredArgsConstructor;
@@ -14,10 +15,7 @@ import org.springframework.stereotype.Service;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
@@ -26,9 +24,10 @@ public class JudgeServiceImpl implements JudgeService {
 
     private final DockerSandboxService dockerSandboxService;
     private final ProblemRepo problemRepo;
+    private final SubmissionProgressProducer submissionProgressProducer;
 
     @Override
-    public JudgeResult judge(SubmissionInputDto submission, String problemId) throws Exception {
+    public JudgeResult judge(String submissionId,SubmissionInputDto submission, String problemId) throws Exception {
         log.info("Starting judge process for problem: {}, language: {}", problemId, submission.getLanguage());
 
         String judgeId = UUID.randomUUID() + "_" + problemId + "_" + submission.getUserId() + "_" + submission.getLanguage();
@@ -52,11 +51,11 @@ public class JudgeServiceImpl implements JudgeService {
 
             ProblemEntity problem = problemOpt.get();
 
-            if (!problem.getSupportedLanguage().contains(submission.getLanguage())) {
-                judgeResult.setFinalVerdict(ResponseStatus.CE);
-                judgeResult.setCompileMessage("Language not supported for this problem");
-                return judgeResult;
-            }
+//            if (!problem.getSupportedLanguage().contains(submission.getLanguage())) {
+//                judgeResult.setFinalVerdict(ResponseStatus.CE);
+//                judgeResult.setCompileMessage("Language not supported for this problem");
+//                return judgeResult;
+//            }
 
             List<TestcaseEntity> testCases = problem.getTestcaseEntities();
             if (testCases == null || testCases.isEmpty()) {
@@ -79,7 +78,7 @@ public class JudgeServiceImpl implements JudgeService {
 
                 String testcaseId = String.valueOf(i+1);
 
-                log.info("Executing test case {}/{}: {}", i + 1, testCases.size(), testCase.getTestcaseName());
+                submissionProgressProducer.send(submissionId, i + 1, testCases.size(),"RUNNING");
 
                 TestCaseResult testCaseResult = dockerSandboxService.executeTestCase(
                         judgeId,
@@ -119,8 +118,30 @@ public class JudgeServiceImpl implements JudgeService {
             judgeResult.setPassedTestCases(passedCount);
             judgeResult.setFinalVerdict(finalVerdict);
 
-            log.info("Judge completed: {}/{} test cases passed, final verdict: {}",
-                    passedCount, testCases.size(), finalVerdict);
+            Map<String, Object> extra = Map.of(
+                    "userId", submission.getUserId(),
+                    "contestId", submission.getContestId(),
+                    "problemId", submission.getProblemId(),
+                    "allAccepted", judgeResult.getFinalVerdict() == ResponseStatus.AC,
+                    "submittedAtEpoch", java.time.Instant.now().getEpochSecond() // ✅ đúng key
+            );
+
+            log.info("[KAFKA DONE] submissionId={} userId={} contestId={} problemId={} allAccepted={} submittedAtEpoch={}",
+                    submissionId,
+                    extra.get("userId"),
+                    extra.get("contestId"),
+                    extra.get("problemId"),
+                    extra.get("allAccepted"),
+                    extra.get("submittedAtEpoch")
+            );
+
+            submissionProgressProducer.send(
+                    submissionId,
+                    passedCount,
+                    testCases.size(),
+                    "DONE",
+                    extra
+            );
 
         } catch (Exception e) {
             log.error("Error during judge process: {}", e.getMessage(), e);

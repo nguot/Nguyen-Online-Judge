@@ -12,7 +12,6 @@ import com.example.jude_service.enums.ResponseStatus;
 import com.example.jude_service.exceptions.ErrorCode;
 import com.example.jude_service.exceptions.specException.ProblemBusinessException;
 import com.example.jude_service.repo.ProblemRepo;
-import com.example.jude_service.repo.SubmissionRepo;
 import com.example.jude_service.services.ProblemService;
 import com.example.jude_service.services.SubmissionService;
 import com.example.jude_service.utils.StringUtils;
@@ -27,7 +26,6 @@ import org.springframework.data.mongodb.core.query.Query;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
-import java.util.stream.Collectors;
 
 
 @Service
@@ -72,6 +70,39 @@ public class ProblemServiceImpl implements ProblemService {
 
         entity.setIsActive(isActive);
         entity.setTestcaseEntities(testcaseList);
+        entity.setSolution(input.getSolution());
+
+        problemRepo.save(entity);
+        return CommonResponse.success(entity);
+    }
+
+    @Override
+    public CommonResponse<ProblemEntity> cloneProblem(ProblemInputDto input) {
+        validateBeforeInsertProblem(input);
+
+        ProblemEntity entity = ProblemEntity.builder()
+                .title(input.getTitle())
+                .description(input.getDescription())
+                .tags(input.getTags())
+                .imageUrls(input.getImageUrls())
+                .level(input.getLevel())
+                .supportedLanguage(input.getSupportedLanguage())
+                .rating(input.getRating())
+                .score(input.getScore())
+                .timeLimit(input.getTimeLimit())
+                .memoryLimit(input.getMemoryLimit())
+                .inputType(input.getInputType())
+                .outputType(input.getOutputType())
+                .authorId(input.getUserId())
+                .createdBy(input.getUserId())
+                .lastModifiedBy(input.getUserId())
+                .contestId(input.getContestId())
+                .build();
+
+        Boolean isActive = input.getSolution() != null && input.getTestcaseEntities() != null;
+
+        entity.setIsActive(isActive);
+        entity.setTestcaseEntities(input.getTestcaseEntities());
         entity.setSolution(input.getSolution());
 
         problemRepo.save(entity);
@@ -254,6 +285,17 @@ public class ProblemServiceImpl implements ProblemService {
         Query query = new Query();
         ProblemInputDto term = input.getFilter();
 
+        if(term.getContestId()!=null) {
+            query.addCriteria(
+                    Criteria.where("contestId").is(term.getContestId())
+            );
+        }
+
+        if(term.getUserId()!=null) {
+            query.addCriteria(
+                    Criteria.where("authorId").is(term.getUserId())
+            );
+        }
         if (term.getTags() != null && !term.getTags().isEmpty()) {
             query.addCriteria(
                     Criteria.where("tags").in(term.getTags())

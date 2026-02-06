@@ -17,6 +17,5 @@ public interface FriendshipService {
 
     CommonResponse<Void> unfriend(Long userId, UnfriendRequest request);
 
-    CommonResponse<PageResult<FriendResponse>> getFriendList(Long userId,
-                                                             PageRequestDto<FriendListFilter> request);
+    CommonResponse<PageResult<FriendResponse>> getFriendList(Long userId, PageRequestDto<FriendListFilter> request);
 }

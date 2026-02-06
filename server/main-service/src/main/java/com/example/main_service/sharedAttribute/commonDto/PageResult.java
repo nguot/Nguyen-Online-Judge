@@ -12,6 +12,11 @@ import java.util.List;
 @AllArgsConstructor
 @NoArgsConstructor
 public class PageResult<TEntity> {
+    public void setData(List<TEntity> data) {
+        this.data = data;
+        this.totalCount = data == null ? 0 : data.size();
+    }
+
     private long totalCount;
     private List<TEntity> data;
 }

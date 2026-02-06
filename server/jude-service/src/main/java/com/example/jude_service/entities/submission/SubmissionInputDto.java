@@ -16,4 +16,5 @@ public class SubmissionInputDto {
     private Long userId;
     private String sourceCode; // objectName cua source code
     private LanguageType language;
+    private Boolean allAccepted;
 }

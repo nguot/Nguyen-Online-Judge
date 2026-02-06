@@ -22,13 +22,11 @@ public interface ContestRepo extends JpaRepository<ContestEntity, Long>, JpaSpec
     @Query("""
         SELECT c FROM ContestEntity c
         WHERE c.contestType = :official
-          AND c.contestStatus = :finished
           AND c.ratingCalculated = false
           AND :now >= c.startTime + (c.duration * 1 second)
     """)
     List<ContestEntity> findFinishedOfficialNotRated(
             @Param("official") ContestType official,
-            @Param("finished") ContestStatus finished,
             @Param("now") LocalDateTime now
     );
 }

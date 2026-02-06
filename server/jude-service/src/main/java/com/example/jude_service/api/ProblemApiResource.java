@@ -11,7 +11,7 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("${api.prefix}/problem")
+@RequestMapping("${api.prefix}/jude-service/problem")
 @RequiredArgsConstructor
 @Validated
 public class ProblemApiResource {
@@ -21,6 +21,11 @@ public class ProblemApiResource {
     @PostMapping(value = "")
     public CommonResponse<ProblemEntity> addProblem(@RequestBody ProblemInputDto input) {
         return problemService.addProblem(input);
+    }
+
+    @PostMapping(value = "/clone")
+    public CommonResponse<ProblemEntity> cloneProblem(@RequestBody ProblemInputDto input) {
+        return problemService.cloneProblem(input);
     }
 
     @PostMapping(value = "/search")
@@ -39,7 +44,7 @@ public class ProblemApiResource {
     }
 
     @PostMapping(value = "/by-contest")
-    public CommonResponse<PageResult<ProblemEntity>> getProblemByContest(PageRequestDto<Long> input) {
+    public CommonResponse<PageResult<ProblemEntity>> getProblemByContest(@RequestBody PageRequestDto<Long> input) {
         return problemService.getByContest(input);
     }
 

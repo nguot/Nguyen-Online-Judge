@@ -69,19 +69,20 @@ public class ContestController {
     }
 
     // promote to gym
-    @PostMapping("{contestId}/promote-to-gym")
+    @PostMapping("{contestId}/promote-to-group")
     @PreAuthorize("@rbacService.hasPermission(authentication, 'contest:edit', 'CONTEST', #contestId)")
-    public CommonResponse<PromoteDraftToGymResponseDto> promoteDraftToGym(
+    public CommonResponse<String> promoteDraftToGroup(
             @PathVariable("contestId") Long contestId,
             @RequestBody PromoteDraftToGymRequestDto input
     ) {
-        return CommonResponse.success(contestService.promoteDraftToGym(getUserIdFromToken(),contestId, input));
+        contestService.promoteDraftToGym(getUserIdFromToken(),contestId, input);
+        return CommonResponse.success("ContestId promoted to GYM sucessfully");
     }
 
     @PostMapping("/{contest_id}/make-official") //Pro_user or admin
-    @PreAuthorize("@rbacService.hasPermission(authentication, 'contest:make_official', 'CONTEST', #contestId)")
+    @PreAuthorize("@rbacService.hasPermission(authentication, 'contest:make_official', 'SYSTEM', 0)")
     public CommonResponse<String> promoteDrafttoOfficial (
-           @PathVariable("contestId") Long contestId,
+           @PathVariable("contest_id") Long contestId,
                    @RequestBody PromoteDraftToOfficialRequestDto request
     ) {
         contestService.promoteDraftToOfficial(getUserIdFromToken(),contestId, request);
@@ -98,15 +99,34 @@ public class ContestController {
         return CommonResponse.success("Re-arrange problems successfully");
     }
 
-
     @PostMapping("/{contestId}/assign-reviewer/{reviewerId}")
-    @PreAuthorize("@rbacService.hasPermission(authentication, 'contest:assign_reviewer', 'CONTEST', #contestId)")
+    @PreAuthorize("@rbacService.hasPermission(authentication, 'contest:edit', 'CONTEST', #contestId)")
     public CommonResponse<String> assignReviewer(
             @PathVariable Long contestId,
             @PathVariable Long reviewerId
     ) {
         contestService.assignReviewer(getUserIdFromToken(),contestId, reviewerId);
         return CommonResponse.success("Reviewer assigned successfully");
+    }
+
+    @PostMapping("/{contestId}/unassign-reviewer/{reviewerId}")
+    @PreAuthorize("@rbacService.hasPermission(authentication, 'contest:edit', 'CONTEST', #contestId)")
+    public CommonResponse<String> unassignReviewer(
+            @PathVariable Long contestId,
+            @PathVariable Long reviewerId
+    ) {
+        contestService.unassignReviewer(getUserIdFromToken(), contestId, reviewerId);
+        return CommonResponse.success("Reviewer unassigned successfully");
+    }
+
+    @GetMapping("/{contestId}/reviewers")
+    @PreAuthorize("@rbacService.hasPermission(authentication, 'contest:edit', 'CONTEST', #contestId)")
+    public CommonResponse<ContestReviewerListResponseDto> listReviewers(
+            @PathVariable Long contestId
+    ) {
+        return CommonResponse.success(
+                contestService.listReviewersByContestId(getUserIdFromToken(), contestId)
+        );
     }
 
 }

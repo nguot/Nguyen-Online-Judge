@@ -15,9 +15,9 @@ public interface ContestRegistrationRepo extends JpaRepository<ContestRegistrati
 
 
     @Query(value = """
-        SELECT cr.contest_id AS contestId, 
-               cr.user_id AS userId, 
-               ud.user_name AS userName, 
+        SELECT cr.contest_id AS contestId,
+               cr.user_id AS userId,
+               ud.user_name AS userName,
                cr.registered_at AS registeredAt
         FROM contest_registration cr
         JOIN user_details ud ON cr.user_id=ud.user_id

@@ -8,6 +8,7 @@ import com.example.jude_service.entities.problem.ProblemInputDto;
 
 public interface ProblemService {
     CommonResponse<ProblemEntity> addProblem(ProblemInputDto input);
+    CommonResponse<ProblemEntity> cloneProblem(ProblemInputDto input);
     CommonResponse<PageResult<ProblemEntity>> getProblemPage(PageRequestDto<ProblemInputDto> input);
     CommonResponse<ProblemEntity> getProblemById(String problemId);
     CommonResponse<PageResult<ProblemEntity>> getByContest(PageRequestDto<Long> input);

@@ -10,17 +10,13 @@ import lombok.Data;
 public class ContestFilterDto {
     private Long rated;
 
-    @JsonProperty("contest_status")
     private ContestStatus contestStatus;
 
-    @JsonProperty("contest_type")
     private ContestType contestType;
 
     private ContestVisibility visibility;
 
-    @JsonProperty("group_id")
     private Long groupId;
 
-    @JsonProperty("author_id")
     private Long authorId;
 }

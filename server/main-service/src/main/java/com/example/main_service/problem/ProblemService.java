@@ -9,6 +9,7 @@ import com.example.main_service.problem.dto.TestcaseEntity;
 import com.example.main_service.rbac.RbacService;
 import com.example.main_service.sharedAttribute.commonDto.PageRequestDto;
 import com.example.main_service.sharedAttribute.commonDto.PageResult;
+import com.example.main_service.sharedAttribute.enums.ContestType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -19,7 +20,7 @@ import java.util.Objects;
 @RequiredArgsConstructor
 public class ProblemService {
 
-    private final ProblemGrpcClient problemGrpcClient;
+    private final ProblemHttpClient problemGrpcClient;
     private final ContestService contestService;
     private final ContestRepo contestRepo;
     private final RbacService rbacService;
@@ -34,16 +35,16 @@ public class ProblemService {
         ProblemEntity p = problemGrpcClient.addProblem(input);
         rbacService.assignRole(
                 userId,
-                "Author",
-                "Problem",
+                "AUTHOR",
+                "PROBLEM",
                 p.getProblemId()
         );
-        return sanitizeProblem(p);
+        return p;
     }
 
     public ProblemEntity updateProblem(Long userId, String problemId, ProblemInputDto input) {
         ProblemEntity p = problemGrpcClient.updateProblem(input, problemId);
-        return sanitizeProblem(p);
+        return p;
     }
 
     public ProblemEntity deleteProblem(Long userId, String problemId) {
@@ -54,6 +55,7 @@ public class ProblemService {
     public ProblemEntity getProblemById(Long userId, String problemId) {
         ProblemEntity p = problemGrpcClient.getProblemById(problemId);
         p = ensureCanViewProblemOrNull(userId, p);
+        if(p.getAuthorId().equals(userId)) return p;
         return sanitizeProblem(p);
     }
 
@@ -100,32 +102,24 @@ public class ProblemService {
         page.setData(filtered);
         return page;
     }
-
-    /**
-     * Nếu problem không thuộc contest => cho qua
-     * Nếu thuộc contest:
-     *  - contestId không tồn tại => drop
-     *  - canViewProblemInContest(userId, contest) == false => drop
-     */
     private ProblemEntity ensureCanViewProblemOrNull(Long userId, ProblemEntity problem) {
         if (problem == null) return null;
 
         Long contestId = problem.getContestId();
-        if (contestId == null || contestId == 0) {
-            if(userId.equals(problem.getAuthorId())) return problem;
+        if(contestId==null) return null;
+
+        ContestEntity contest = contestRepo.findById(contestId).orElse(null);
+
+        if(contest==null) {
+            if (contestId==0 && userId.equals(problem.getAuthorId())) return problem;
             return null;
         }
 
-        ContestEntity contest = contestRepo.findById(contestId).orElse(null);
-        if (contest == null) return null;
-
         boolean ok = contestService.canViewProblemInContest(userId, contest);
+        if (ok==true) System.out.println(problem.getContestId());
         return ok ? problem : null;
     }
 
-    /**
-     * Lọc testcase: chỉ giữ isSample == true
-     */
     private ProblemEntity sanitizeProblem(ProblemEntity problem) {
         if (problem == null) return null;
 
@@ -133,7 +127,15 @@ public class ProblemService {
         if (tcs != null) {
             problem.setTestcaseEntities(
                     tcs.stream()
-                            .filter(tc -> tc != null && Boolean.TRUE.equals(tc.getIsSample()))
+                            .map(tc -> {
+                                if (tc == null) return null;
+                                // Nếu không phải sample testcase, ẩn input/output
+                                if (!Boolean.TRUE.equals(tc.getIsSample())) {
+                                    tc.setInput(null);
+                                    tc.setOutput(null);
+                                }
+                                return tc;
+                            })
                             .toList()
             );
         }

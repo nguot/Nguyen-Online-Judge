@@ -3,7 +3,6 @@ package com.example.jude_service.api;
 import com.example.jude_service.entities.CommonResponse;
 import com.example.jude_service.entities.PageRequestDto;
 import com.example.jude_service.entities.PageResult;
-import com.example.jude_service.entities.problem.ProblemInputDto;
 import com.example.jude_service.entities.submission.SubmissionEntity;
 import com.example.jude_service.entities.submission.SubmissionInputDto;
 import com.example.jude_service.services.SubmissionService;
@@ -12,7 +11,7 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("${api.prefix}/submission")
+@RequestMapping("${api.prefix}/judge-service/submission")
 @RequiredArgsConstructor
 @Validated
 public class SubmissionApiResource {
@@ -25,27 +24,12 @@ public class SubmissionApiResource {
     }
 
     @PostMapping("/search")
-    public CommonResponse<PageResult<SubmissionEntity>> getPage(PageRequestDto<SubmissionInputDto> pageRequest) {
+    public CommonResponse<PageResult<SubmissionEntity>> getPage(@RequestBody PageRequestDto<SubmissionInputDto> pageRequest) {
         return submissionService.getPage(pageRequest);
     }
 
     @GetMapping("/{submissionId}")
     public CommonResponse<SubmissionEntity> getById(@PathVariable("submissionId") String submissionId) {
         return submissionService.getById(submissionId);
-    }
-
-    @DeleteMapping("/{submissionId}")
-    public CommonResponse<SubmissionEntity> deleteById(@PathVariable("submissionId") String submissionId) {
-        return submissionService.deleteById(submissionId);
-    }
-
-    @DeleteMapping("/by-problem/{problemId}")
-    public CommonResponse<SubmissionEntity> deleteByProblem(@PathVariable("problemId") String problemId) {
-        return submissionService.deleteByProblem(problemId);
-    }
-
-    @DeleteMapping("/by-user/{userId}")
-    public CommonResponse<SubmissionEntity> deleteByUser(@PathVariable("userId") Long userId) {
-        return submissionService.deleteByUser(userId);
     }
 }

@@ -11,6 +11,5 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ContestCreateUpdateResponseDto {
-    @JsonProperty("contest_id")
     private Long contestId;
 }

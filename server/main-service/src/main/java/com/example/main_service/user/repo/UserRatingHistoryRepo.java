@@ -26,6 +26,6 @@ public interface UserRatingHistoryRepo
             WHERE r2.userId = :userId
         )
     """)
-    Optional<UserRatingHistoryEntity> findLatestByUserId(Integer userId);
+    Optional<UserRatingHistoryEntity> findLatestByUserId(Long userId);
 }
 

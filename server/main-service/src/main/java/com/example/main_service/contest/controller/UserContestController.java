@@ -24,10 +24,9 @@ public class UserContestController {
     }
 
     @PostMapping("{contestId}/registrations/search")
-    @PreAuthorize("@rbacService.hasPermission(authentication, 'contest:view', 'Contest', #contestId)")
     public CommonResponse<PageResult<ContestRegistrationResponseDto>> getAllRegistration(
             @PathVariable("contestId") Long contestId,
-            PageRequestDto<ContestRegistrationFilterDto> pageRequestDto
+            @RequestBody PageRequestDto<ContestRegistrationFilterDto> pageRequestDto
     ) {
         return CommonResponse.success(userContestService.getRegistration(contestId, pageRequestDto));
     }

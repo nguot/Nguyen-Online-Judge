@@ -4,6 +4,7 @@ import com.example.main_service.sharedAttribute.commonDto.PageRequestDto;
 import com.example.main_service.sharedAttribute.commonDto.PageResult;
 import com.example.main_service.contest.dto.contest.*;
 import com.example.main_service.contest.model.ContestEntity;
+import com.example.main_service.user.model.UserEntity;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
@@ -17,7 +18,7 @@ public interface ContestService {
     ContestDetailDto getContestDetail(Long userId,Long contestId);
     void deleteContest(Long userId,Long contestId);
     void assignReviewer(Long userId,Long contestId, Long reviewerId);
-    PromoteDraftToGymResponseDto promoteDraftToGym(Long userId,Long contestId, PromoteDraftToGymRequestDto input);
+    void promoteDraftToGym(Long userId,Long contestId, PromoteDraftToGymRequestDto input);
     void promoteDraftToOfficial(Long userId,Long contestId, PromoteDraftToOfficialRequestDto input);
 
     Boolean isContestRunning(Long contestId);
@@ -29,4 +30,6 @@ public interface ContestService {
     Long getContestStartTime(Long contestId);
     Boolean canUserSubmit(Long contestId, Long userId);
     List<ContestEntity> findFinishedOfficialNotRated(LocalDateTime now);
+    void unassignReviewer(Long userId, Long contestId, Long reviewerId);
+    ContestReviewerListResponseDto listReviewersByContestId(Long userId, Long contestId);
 }

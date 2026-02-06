@@ -5,6 +5,5 @@ import lombok.Data;
 
 @Data
 public class ContestRegistrationFilterDto {
-    @JsonProperty("user_id")
     private Long userId;
 }

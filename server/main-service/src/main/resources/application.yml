@@ -41,7 +41,9 @@ server:
   port: 8080
 logging:
   level:
-    org.springframework.kafka.listener.KafkaMessageListenerContainer: DEBUG
+    org.springframework.kafka.listener: INFO
+    org.springframework.kafka.KafkaMessageListenerContainer: INFO
+    org.apache.kafka.clients.consumer: WARN
 
 minio:
   endpoint: http://localhost:9000

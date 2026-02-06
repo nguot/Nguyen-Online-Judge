@@ -2,12 +2,15 @@ package com.example.main_service.contest.service.impl;
 
 import com.example.main_service.contest.dto.contest.*;
 import com.example.main_service.contest.model.ContestEntity;
+import com.example.main_service.contest.model.ContestProblemEntity;
 import com.example.main_service.contest.repo.ContestProblemRepo;
 import com.example.main_service.contest.repo.ContestRegistrationRepo;
 import com.example.main_service.contest.repo.ContestRepo;
+import com.example.main_service.contest.service.ContestProblemService;
 import com.example.main_service.contest.service.ContestService;
 import com.example.main_service.contest.specification.ContestSpec;
 import com.example.main_service.contest.utils.StringUtils;
+import com.example.main_service.problem.ProblemService;
 import com.example.main_service.rbac.RbacService;
 import com.example.main_service.sharedAttribute.commonDto.PageRequestDto;
 import com.example.main_service.sharedAttribute.commonDto.PageResult;
@@ -16,10 +19,13 @@ import com.example.main_service.sharedAttribute.enums.ContestType;
 import com.example.main_service.sharedAttribute.enums.ContestVisibility;
 import com.example.main_service.sharedAttribute.exceptions.ErrorCode;
 import com.example.main_service.sharedAttribute.exceptions.specException.ContestBusinessException;
+import com.example.main_service.user.model.UserEntity;
+import com.example.main_service.user.repo.UserRepo;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -34,9 +40,10 @@ public class ContestServiceImpl implements ContestService {
 
     private final ContestRepo contestRepo;
     private final ContestProblemRepo contestProblemRepo;
+    private final ContestProblemService contestProblemService;
     private final ContestRegistrationRepo contestRegistrationRepo;
     private final RbacService rbacService;
-
+    private final UserRepo userRepo;
     // =========================
     // CREATE
     // =========================
@@ -84,12 +91,11 @@ public class ContestServiceImpl implements ContestService {
         requireUser(userId);
         ContestEntity contest = getContestOrThrow(contestId);
 
-        return updateDraft(userId, contest, input);
-//        return switch (contest.getContestType()) {
-//            case OFFICIAL -> updateOfficial(userId, contest, input);
-//            case GYM -> updateGym(userId, contest, input);
-//            case DRAFT -> updateDraft(userId, contest, input);
-//        }; cái return mới chuẩn
+        return switch (contest.getContestType()) {
+            case OFFICIAL -> updateOfficial(userId, contest, input);
+            case GYM -> updateGym(userId, contest, input);
+            case DRAFT -> updateDraft(userId, contest, input);
+        };
     }
 
     private ContestCreateUpdateResponseDto updateOfficial(Long userId, ContestEntity contest, ContestCreateUpdateRequestDto input) {
@@ -107,11 +113,12 @@ public class ContestServiceImpl implements ContestService {
     }
 
     private ContestCreateUpdateResponseDto updateGym(Long userId, ContestEntity contest, ContestCreateUpdateRequestDto input) {
-        // rule: gym must upcoming + author/admin
-        if (!isUpcoming(contest)) throw new ContestBusinessException(ErrorCode.CONTEST_ERROR);
         ensureAuthorOrAdmin(userId, contest);
 
-        applyUpdateFields(contest, input);
+        // Chỉ update các field được phép cho GYM
+        if (StringUtils.isNotNullOrBlank(input.getTitle())) contest.setTitle(input.getTitle());
+        if (StringUtils.isNotNullOrBlank(input.getDescription())) contest.setDescription(input.getDescription());
+
         validateContest(contest);
         contestRepo.save(contest);
 
@@ -139,7 +146,6 @@ public class ContestServiceImpl implements ContestService {
         if (input.getStartTime() != null) contest.setStartTime(input.getStartTime());
         if (input.getDuration() != null) contest.setDuration(input.getDuration());
         if (input.getRated() != null) contest.setRated(input.getRated());
-        if (input.getVisibility() != null) contest.setVisibility(input.getVisibility());
         if (input.getGroupId() != null) contest.setGroupId(input.getGroupId());
     }
 
@@ -156,7 +162,7 @@ public class ContestServiceImpl implements ContestService {
         ensureCanDelete(userId, contest);
 
         // official/gym: đang chạy hoặc đã xong thì không cho xóa
-        if (contest.getContestType() != ContestType.DRAFT) {
+        if (contest.getContestType() == ContestType.OFFICIAL) {
             if (!isUpcoming(contest)) throw new ContestBusinessException(ErrorCode.CONTEST_ERROR);
         }
 
@@ -205,9 +211,15 @@ public class ContestServiceImpl implements ContestService {
     }
 
     private ContestEntity filterContest(Long userId, ContestEntity contest) {
-        // PRIVATE contest: chỉ author/admin mới được thấy
+        // PRIVATE DRAFT contest: chỉ author/admin/reviewer mới được thấy
+        // PUBLIC => thoai mai
         if (contest.getVisibility() == ContestVisibility.PRIVATE) {
-            if (!isAuthor(userId, contest) && !rbacService.isAdmin(userId)) return null;
+            boolean canView = isAuthor(userId, contest)
+                    || rbacService.isAdmin(userId)
+                    || isReviewer(userId, contest)
+                    || (contest.getGroupId() != null && rbacService.isGroupMember(userId, contest.getGroupId()));
+
+            if (!canView) return null;
         }
         contest.setContestStatus(resolveStatus(contest));
         return contest;
@@ -226,10 +238,13 @@ public class ContestServiceImpl implements ContestService {
         ContestSummaryDto summary = toSummaryDto(contest);
 
         boolean canViewProblems = canViewProblemInContest(userId, contest);
-        List<String> problemIds = canViewProblems ? loadProblemIds(contestId) : List.of();
+        List<ContestProblemEntity> problemIds = canViewProblems ? loadProblemIds(contestId) : List.of();
+
+        String contestRole = isAuthor(userId,contest) ? "AUTHOR" : (isReviewer(userId,contest) ? "REVIEWER" : "PARTICIPANT");
 
         ContestDetailDto response = ContestDetailDto.builder()
                 .problems(problemIds)
+                .contestRole(contestRole)
                 .build();
 
         BeanUtils.copyProperties(summary, response);
@@ -238,10 +253,16 @@ public class ContestServiceImpl implements ContestService {
 
     @Override
     public Boolean canViewProblemInContest(Long userId, ContestEntity contest) {
-        if (rbacService.isAdmin(userId) || isAuthor(userId, contest)) return true;
 
+        if (rbacService.isAdmin(userId) || isAuthor(userId, contest) || isReviewer(userId,contest)) return true;
+
+        // Group member có thể xem nếu contest thuộc group của họ
+        if (contest.getGroupId() != null && rbacService.isGroupMember(userId, contest.getGroupId())) {
+            return true; // tạm thời contest group k thi
+        }
         ContestStatus status = resolveStatus(contest);
 
+        if (status == ContestStatus.UPCOMING) return false;
         if (status == ContestStatus.FINISHED) return true;
 
         if (status == ContestStatus.RUNNING) {
@@ -267,7 +288,7 @@ public class ContestServiceImpl implements ContestService {
                 .build();
     }
 
-    private List<String> loadProblemIds(Long contestId) {
+    private List<ContestProblemEntity> loadProblemIds(Long contestId) {
         return contestProblemRepo.findProblemIdsByContestId(contestId);
     }
 
@@ -275,51 +296,122 @@ public class ContestServiceImpl implements ContestService {
     // PROMOTE
     // =========================
     @Override
-    public PromoteDraftToGymResponseDto promoteDraftToGym(Long userId, Long contestId, PromoteDraftToGymRequestDto input) {
+    @Transactional
+    public void promoteDraftToGym(Long userId, Long contestId, PromoteDraftToGymRequestDto input) {
         requireUser(userId);
-        ContestEntity contest = getContestOrThrow(contestId);
 
-        if (contest.getContestType() != ContestType.DRAFT) {
+        ContestEntity draft = getContestOrThrow(contestId);
+
+        if (draft.getContestType() != ContestType.DRAFT) {
             throw new ContestBusinessException(ErrorCode.CONTEST_ERROR);
         }
 
-        ensureAuthorOrAdmin(userId, contest);
+        ensureAuthorOrAdmin(userId, draft);
 
-        if (input.getStartTime() != null) contest.setStartTime(input.getStartTime());
-        if (input.getDuration() != null) contest.setDuration(input.getDuration());
+        // ===== CLONE BASE INFO =====
+        ContestEntity gym = new ContestEntity();
 
-        contest.setContestType(ContestType.GYM);
-        contest.setVisibility(input.getMakePublic() ? ContestVisibility.PUBLIC : ContestVisibility.PRIVATE);
-        contest.setRated(0L);
+        gym.setTitle(draft.getTitle());
+        gym.setDescription(draft.getDescription());
+        gym.setAuthor(draft.getAuthor());
 
-        validateContest(contest);
-        contestRepo.save(contest);
+        ///  tam thoi cho contest finished luon
+//        gym.setStartTime(input.getStartTime() != null ? input.getStartTime() : draft.getStartTime());
+//        gym.setDuration(input.getDuration() != null ? input.getDuration() : draft.getDuration());
+        gym.setGroupId(input.getGroupId() != null ? input.getGroupId() : draft.getGroupId());
 
-        return PromoteDraftToGymResponseDto.builder()
-                .contestId(contest.getContestId())
-                .build();
+        // ===== SET GYM FLAGS =====
+        gym.setContestType(ContestType.GYM);
+        gym.setVisibility(ContestVisibility.PRIVATE); // Mặc định PRIVATE
+        gym.setRated(0L); // GYM không rated
+        gym.setContestStatus(ContestStatus.FINISHED);
+
+        // ===== SAVE GYM FIRST (để có id) =====
+        Long contestGymId = contestRepo.save(gym).getContestId();
+
+        // ===== CLONE CONTEST - PROBLEM MAPPING =====
+        List<ContestProblemEntity> draftLinks = contestProblemRepo.findProblemIdsByContestId(draft.getContestId());
+
+        for (ContestProblemEntity link : draftLinks) {
+            ContestAttachProblemRequestDto req = new ContestAttachProblemRequestDto();
+            req.setProblemId(String.valueOf(link.getProblemId()));
+            req.setProblemLabel(link.getProblemLabel());
+
+            contestProblemService.addProblemToContestGym(
+                    draft.getAuthor(),
+                    contestGymId,
+                    req
+            );
+        }
+
+        // ===== CLONE ROLE-USER =====
+        rbacService.cloneRoleUsersForScope(
+                "CONTEST",
+                draft.getContestId().toString(),
+                "CONTEST",
+                contestGymId.toString()
+        );
     }
 
     @Override
+    @Transactional
     public void promoteDraftToOfficial(Long userId, Long contestId, PromoteDraftToOfficialRequestDto input) {
         requireUser(userId);
-        ContestEntity contest = getContestOrThrow(contestId);
 
-        if (contest.getContestType() != ContestType.DRAFT) {
+        ContestEntity draft = getContestOrThrow(contestId);
+
+        if (draft.getContestType() != ContestType.DRAFT) {
             throw new ContestBusinessException(ErrorCode.CONTEST_ERROR);
         }
 
-        ensureAuthorOrAdmin(userId, contest);
+        ensureAuthorOrAdmin(userId, draft);
 
-        if (input.getStartTime() != null) contest.setStartTime(input.getStartTime());
-        contest.setRated(input.getRated() != null ? input.getRated() : 0L);
+        // ===== CLONE BASE INFO =====
+        ContestEntity official = new ContestEntity();
 
-        contest.setContestType(ContestType.OFFICIAL);
-        contest.setVisibility(ContestVisibility.PUBLIC);
+        official.setTitle(draft.getTitle());
+        official.setDescription(draft.getDescription());
+        official.setAuthor(draft.getAuthor());
 
-        validateContest(contest);
-        contestRepo.save(contest);
+        // ===== OVERRIDE BY INPUT (ưu tiên input, fallback draft) =====
+        official.setStartTime(input.getStartTime() != null ? input.getStartTime() : draft.getStartTime());
+        official.setDuration(input.getDuration() != null ? input.getDuration() : draft.getDuration());
+
+        Long ratedVal = input.getRated() != null ? input.getRated() : draft.getRated();
+        official.setRated(ratedVal != null ? ratedVal : 0L);
+        if(ratedVal==0) official.setRatingCalculated(Boolean.TRUE);
+
+        // ===== SET OFFICIAL FLAGS =====
+        official.setContestType(ContestType.OFFICIAL);
+        official.setVisibility(ContestVisibility.PUBLIC);
+
+        // resolveStatus dựa trên official (startTime/duration đã set)
+        official.setContestStatus(resolveStatus(official));
+
+        // validate BEFORE save để bắt lỗi duration/startTime null sớm
+        validateContest(official);
+
+        // ===== SAVE OFFICIAL FIRST (để có id) =====
+        Long contestOfficialId = contestRepo.save(official).getContestId();
+
+        // ===== CLONE CONTEST - PROBLEM MAPPING ===
+        List<ContestProblemEntity> draftLinks = contestProblemRepo.findProblemIdsByContestId(draft.getContestId());
+
+        for (ContestProblemEntity link : draftLinks) {
+            ContestAttachProblemRequestDto req = new ContestAttachProblemRequestDto();
+            req.setProblemId(String.valueOf(link.getProblemId()));     // nếu problemId trong entity là Long/Integer
+            req.setProblemLabel(link.getProblemLabel());
+
+            contestProblemService.addProblemToContestOfficial(
+                    draft.getAuthor(),
+                    contestOfficialId,
+                    req
+            );
+        }
+        // clone ca trong role-user
+        rbacService.cloneRoleUsersForScope("CONTEST",draft.getContestId().toString(),"CONTEST",contestOfficialId.toString());
     }
+
 
     // =========================
     // REVIEWER
@@ -330,13 +422,63 @@ public class ContestServiceImpl implements ContestService {
         requireUser(userId);
         ContestEntity contest = getContestOrThrow(contestId);
 
-        rbacService.assignRole(reviewerId, "REVIEWER", "Contest", contestId.toString());
+        rbacService.assignRole(reviewerId, "REVIEWER", "CONTEST", contestId.toString());
 
-        List<String> problemIds = contestProblemRepo.findProblemIdsByContestId(contestId);
+        List<String> problemIds = contestProblemRepo.findProblemIdsByContestId(contestId)
+                .stream()
+                .map(ContestProblemEntity::getProblemId)   // hoặc getProblemId().toString() nếu là Integer/Long
+                .toList();
+
         for (String problemId : problemIds) {
-            rbacService.assignRole(reviewerId, "REVIEWER", "Problem", problemId);
+            rbacService.assignRole(reviewerId, "REVIEWER", "PROBLEM", problemId);
         }
     }
+
+    @Override
+    @Transactional
+    public void unassignReviewer(Long userId, Long contestId, Long reviewerId) {
+        requireUser(userId);
+        ContestEntity contest = getContestOrThrow(contestId);
+
+        // 1) Gỡ quyền reviewer ở contest scope
+        rbacService.unassignRole(reviewerId, "REVIEWER", "CONTEST", contestId.toString());
+
+        // 2) Gỡ quyền reviewer ở từng problem thuộc contest
+        List<String> problemIds = contestProblemRepo.findProblemIdsByContestId(contestId)
+                .stream()
+                .map(ContestProblemEntity::getProblemId)
+                .toList();
+
+        for (String problemId : problemIds) {
+            rbacService.unassignRole(reviewerId, "REVIEWER", "PROBLEM", problemId);
+        }
+    }
+
+    @Override
+    public ContestReviewerListResponseDto listReviewersByContestId(Long userId, Long contestId) {
+        requireUser(userId);
+        getContestOrThrow(contestId);
+
+        List<Long> reviewerIds = rbacService.listUserIdsByRole("REVIEWER", "CONTEST", contestId.toString());
+
+        List<UserEntity> users = new java.util.ArrayList<>();
+        userRepo.findAllById(reviewerIds).forEach(users::add);
+
+        return ContestReviewerListResponseDto.builder()
+                .contestId(contestId)
+                .reviewers(
+                        users.stream()
+                                .map(u -> ContestReviewerListResponseDto.ContestReviewerItemDto.builder()
+                                        .userId(u.getUserId())
+                                        .username(u.getUserName())
+                                        .email(u.getEmail())
+                                        .build()
+                                )
+                                .toList()
+                )
+                .build();
+    }
+
 
     // =========================
     // REGISTRATION
@@ -357,7 +499,6 @@ public class ContestServiceImpl implements ContestService {
     public List<ContestEntity> findFinishedOfficialNotRated(LocalDateTime now) {
         return contestRepo.findFinishedOfficialNotRated(
                 ContestType.OFFICIAL,
-                ContestStatus.FINISHED,
                 now
         );
     }
@@ -428,7 +569,7 @@ public class ContestServiceImpl implements ContestService {
     }
 
     private boolean isUpcoming(ContestEntity contest) {
-        if (contest.getStartTime() == null) return false; // giữ logic cũ
+        if (contest.getStartTime() == null) return false;
         return LocalDateTime.now().isBefore(contest.getStartTime());
     }
 
@@ -440,7 +581,7 @@ public class ContestServiceImpl implements ContestService {
     }
 
     private boolean isFinished(ContestEntity contest) {
-        if (contest.getStartTime() == null || contest.getDuration() == null) return true; // giữ logic cũ
+        if (contest.getStartTime() == null || contest.getDuration() == null) return true;
         LocalDateTime end = contest.getStartTime().plusSeconds(contest.getDuration());
         return LocalDateTime.now().isAfter(end);
     }
@@ -454,8 +595,8 @@ public class ContestServiceImpl implements ContestService {
             throw new ContestBusinessException(ErrorCode.CONTEST_VALIDATION_ERROR, "Duration khong duoc am");
         }
 
-        // OFFICIAL và GYM bắt buộc có startTime + duration
-        if (contest.getContestType() == ContestType.OFFICIAL || contest.getContestType() == ContestType.GYM) {
+        // OFFICIAL bắt buộc có startTime + duration
+        if (contest.getContestType() == ContestType.OFFICIAL) {
             if (contest.getStartTime() == null || contest.getDuration() == null) {
                 throw new ContestBusinessException(
                         ErrorCode.CONTEST_VALIDATION_ERROR,
@@ -474,8 +615,12 @@ public class ContestServiceImpl implements ContestService {
         return contest.getAuthor() != null && contest.getAuthor().equals(userId);
     }
 
+    private boolean isReviewer(Long userId, ContestEntity contest) {
+        return rbacService.isReviewer(userId,contest.getContestId());
+    }
+
     private void ensureAuthorOrAdmin(Long userId, ContestEntity contest) {
-        if (!isAuthor(userId, contest) && !rbacService.isAdmin(userId)) {
+        if (!isAuthor(userId, contest) && !rbacService.isAdmin(userId) && !isReviewer(userId,contest)) {
             throw new ContestBusinessException(ErrorCode.CONTEST_ACCESS_DENY);
         }
     }
@@ -486,7 +631,14 @@ public class ContestServiceImpl implements ContestService {
         if (v == ContestVisibility.PUBLIC) return;
 
         if (v == ContestVisibility.PRIVATE) {
-            if (isAuthor(userId, contest) || rbacService.isAdmin(userId)) return;
+
+            //check common permissions
+            if (isAuthor(userId, contest) || rbacService.isAdmin(userId) || isReviewer(userId,contest)) return;
+
+            /// Check group scope permissions
+            if (contest.getGroupId() != null && rbacService.isGroupMember(userId, contest.getGroupId())) {
+                return;
+            }
             throw new ContestBusinessException(ErrorCode.CONTEST_ACCESS_DENY);
         }
 

@@ -11,6 +11,8 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
+import static com.example.main_service.rbac.RbacService.getUserIdFromToken;
+
 @RestController
 @RequestMapping("${api.prefix}/contest")
 @RequiredArgsConstructor
@@ -24,7 +26,7 @@ public class DashBoardController {
     private final ContestRatingService contestRatingService;
 
     // mỗi 5-10s FE gọi lại api này dựa trên page hiện tại của user
-    @GetMapping("/dashboard/page/{contestId}")
+    @PostMapping("/dashboard/page/{contestId}")
     public CommonResponse<DashBoardPageResponseDto> getDashboard(
             @PathVariable Long contestId,
             @RequestParam(defaultValue = "0") int offset,
@@ -35,12 +37,23 @@ public class DashBoardController {
         );
     }
 
-    @PostMapping("/{contestId}/calculate-rating") // scheduler 30s đọc bảng contest xem có cái nào được tính chưa
-    public CommonResponse<ContestRatingCalcResponseDto> calculateRating(
-            @PathVariable Long contestId
+    @PostMapping("/dashboard/page/{contestId}/friends")
+    public CommonResponse<DashBoardPageResponseDto> getFriendsRanking(
+            @PathVariable Long contestId,
+            @RequestParam(defaultValue = "0") int offset,
+            @RequestParam(defaultValue = "10") int limit
     ) {
         return CommonResponse.success(
-                contestRatingService.calculateRating(contestId) // tính rating cho problem nữa
+                dashBoardService.getFriendsRanking(contestId, getUserIdFromToken(), offset, limit)
         );
     }
+
+//    @PostMapping("/{contestId}/calculate-rating") // scheduler 30s đọc bảng contest xem có cái nào được tính chưa
+//    public CommonResponse<ContestRatingCalcResponseDto> calculateRating(
+//            @PathVariable Long contestId
+//    ) {
+//        return CommonResponse.success(
+//                contestRatingService.calculateRating(contestId) // tính rating cho problem nữa
+//        );
+//    }
 }

@@ -32,22 +32,19 @@ public class AuthServiceImpl implements AuthService {
         String email = InputValidator.normalizeEmail(req.getEmail());
         String password = req.getPassword();
 
-        InputValidator.validateRegister(username, email, password);
+        //InputValidator.validateRegister(username, email, password);
+        UserEntity currentUser = userRepo.findByUserName(username).orElse(null);
+        if(currentUser!=null) throw new RuntimeException("USERNAME_OR_EMAIL_ALREADY_EXISTS");
 
-        try {
-            UserEntity u = new UserEntity();
-            u.setUserName(username);
-            u.setEmail(email);
-            u.setPassword(encoder.encode(password));
+        UserEntity u = new UserEntity();
+        u.setUserName(username);
+        u.setEmail(email);
+        u.setPassword(encoder.encode(password));
 
-            UserEntity saved = userRepo.save(u);
-            return new RegisterResponse(
-                    saved.getUserId(), req.getUserName(), req.getEmail()
-            );
-
-        } catch (DataIntegrityViolationException e) {
-            throw new RuntimeException("USERNAME_OR_EMAIL_ALREADY_EXISTS");
-        }
+        UserEntity saved = userRepo.save(u);
+        return new RegisterResponse(
+                saved.getUserId(), req.getUserName(), req.getEmail()
+        );
     }
 
     public LoginResponse login(LoginRequest req, String ipAddr) {
@@ -69,6 +66,8 @@ public class AuthServiceImpl implements AuthService {
         res.setRefreshToken(refreshToken);
         res.setExpiresIn(tokenService.getAccessTokenExpiry());
         res.setIsAdmin(rbacService.isAdmin(user.getUserId()));
+        res.setUserId(user.getUserId());
+        res.setIsProUser(rbacService.isProUser(user.getUserId()));
         return res;
     }
 }

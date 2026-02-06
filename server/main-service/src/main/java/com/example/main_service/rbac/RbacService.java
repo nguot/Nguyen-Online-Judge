@@ -8,6 +8,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import jakarta.transaction.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -46,6 +47,42 @@ public class RbacService {
     }
 
     @Transactional
+    public void cloneRoleUsersForScope(
+            String oldScopeType,
+            String oldScopeId,
+            String newScopeType,
+            String newScopeId
+    ) {
+        List<RoleUserEntity> oldRows =
+                roleUserRepo.findByScopeTypeAndScopeId(RoleUserEntity.ScopeType.valueOf(oldScopeType), oldScopeId);
+
+        if (oldRows.isEmpty()) return;
+
+        List<RoleUserEntity> toSave = new ArrayList<>();
+
+        for (RoleUserEntity r : oldRows) {
+            Integer roleId = r.getRoleId();
+            Long userId = r.getUserId();
+
+            // tránh duplicate
+            boolean exists = roleUserRepo.existsByRoleIdAndUserIdAndScopeTypeAndScopeId(
+                    roleId, userId, RoleUserEntity.ScopeType.valueOf(newScopeType), newScopeId
+            );
+            if (exists) continue;
+
+            RoleUserEntity clone = new RoleUserEntity();
+            clone.setRoleId(roleId);
+            clone.setUserId(userId);
+            clone.setScopeType(RoleUserEntity.ScopeType.valueOf(newScopeType));
+            clone.setScopeId(newScopeId);
+
+            toSave.add(clone);
+        }
+
+        roleUserRepo.saveAll(toSave);
+    }
+
+    @Transactional
     public void assignRole(Long userId,
                            String roleName,
                            String scopeTypeStr,
@@ -80,14 +117,102 @@ public class RbacService {
             Integer adminRoleId = roleRepo.findRoleIdByName("ADMIN");
             if (adminRoleId == null) return false;
 
-            // SYSTEM scope: scope_id "*" nghĩa là global
+            // SYSTEM scope: scope_id "0" nghĩa là global
             RoleUserEntity.ScopeType scopeType = RoleUserEntity.ScopeType.SYSTEM;
-            List<Integer> roleIds = roleUserRepo.findRoleIds(userId, scopeType, "*");
+            List<Integer> roleIds = roleUserRepo.findRoleIds(userId, scopeType, "0");
 
             return roleIds.contains(adminRoleId);
         } catch (Exception e) {
             return false;
         }
     }
+    public boolean isProUser(Long userId) {
+        if (userId == null || userId == 0L) return false;
 
+        try {
+            Integer proUserRoleId = roleRepo.findRoleIdByName("PRO_USER");
+            if (proUserRoleId == null) return false;
+
+            RoleUserEntity.ScopeType scopeType = RoleUserEntity.ScopeType.SYSTEM;
+            List<Integer> roleIds = roleUserRepo.findRoleIds(userId, scopeType, "0");
+
+            return roleIds.contains(proUserRoleId);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+    public boolean isReviewer(Long userId,Long contestId) {
+        if (userId == null || userId == 0L) return false;
+
+        try {
+            Integer reviewerRoleId = roleRepo.findRoleIdByName("REVIEWER");
+            if (reviewerRoleId == null) return false;
+
+            RoleUserEntity.ScopeType scopeType = RoleUserEntity.ScopeType.CONTEST;
+            List<Integer> roleIds = roleUserRepo.findRoleIds(userId, scopeType, contestId.toString());
+
+            return roleIds.contains(reviewerRoleId);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    @Transactional
+    public void unassignRole(Long userId,
+                             String roleName,
+                             String scopeTypeStr,
+                             String scopeId) {
+
+        Integer roleId = roleRepo.findRoleIdByName(roleName);
+        if (roleId == null) return; // idempotent
+
+        RoleUserEntity.ScopeType scopeType = RoleUserEntity.ScopeType.valueOf(scopeTypeStr);
+        roleUserRepo.deleteRoleUser(roleId, userId, scopeType, scopeId);
+    }
+
+    public List<Long> listUserIdsByRole(String roleName,
+                                        String scopeTypeStr,
+                                        String scopeId) {
+
+        Integer roleId = roleRepo.findRoleIdByName(roleName);
+        if (roleId == null) return List.of();
+
+        RoleUserEntity.ScopeType scopeType = RoleUserEntity.ScopeType.valueOf(scopeTypeStr);
+        return roleUserRepo.findUserIdsByRoleAndScope(roleId, scopeType, scopeId);
+    }
+
+    public boolean isGroupMember(Long userId, Long groupId) {
+        if (userId == null || groupId == null) return false;
+
+        try {
+            RoleUserEntity.ScopeType scopeType = RoleUserEntity.ScopeType.GROUP;
+            List<Integer> roleIds = roleUserRepo.findRoleIds(userId, scopeType, groupId.toString());
+            return !roleIds.isEmpty(); // Có bất kỳ role nào trong group
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    public boolean hasGroupPermission(Long userId, Long groupId, String permission) {
+        if (userId == null || groupId == null) return false;
+
+        try {
+            RoleUserEntity.ScopeType scopeType = RoleUserEntity.ScopeType.GROUP;
+            List<Integer> roleIds = roleUserRepo.findRoleIds(userId, scopeType, groupId.toString());
+            if (roleIds.isEmpty()) return false;
+
+            List<Integer> permIds = rolePermissionRepo.findPermissionIdsByRoleIds(roleIds);
+            if (permIds.isEmpty()) return false;
+
+            List<String> permNames = permRepo.findPermissionNamesByIds(permIds);
+            return permNames.contains(permission);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    public List<Long> listReviewersByContestId(Long contestId) {
+        if (contestId == null) return List.of();
+        return listUserIdsByRole("REVIEWER", "CONTEST", contestId.toString());
+    }
 }

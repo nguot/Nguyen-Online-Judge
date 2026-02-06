@@ -67,7 +67,7 @@ public class InputValidator {
 
     public static void validateLogin(String username, String password) {
         if (username == null || password == null) {
-            throw new IllegalArgumentException("INVALID_CREDENTIALS");
+            throw new IllegalArgumentException("INVALID_CREDENTIALS1111111");
         }
         String u = normalizeUsername(username);
         if (u == null || u.isBlank() || u.length() > USERNAME_MAX || hasControlChars(u))

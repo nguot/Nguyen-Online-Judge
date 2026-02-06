@@ -22,7 +22,7 @@ public interface ContestProblemRepo extends JpaRepository<ContestProblemEntity, 
             """,nativeQuery = true)
     Optional<Long> findByProblemId(@Param("problemId") String problemId);
 
-    List<String> findProblemIdsByContestId(Long contestId);
+    List<ContestProblemEntity> findProblemIdsByContestId(Long contestId);
 
     @Query("SELECT MAX(cp.problemOrder) FROM ContestProblemEntity cp WHERE cp.contestId = :contestId")
     Optional<Integer> findMaxOrderByContestId(@Param("contestId") Long contestId);

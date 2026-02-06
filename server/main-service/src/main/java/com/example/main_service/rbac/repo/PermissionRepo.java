@@ -15,5 +15,5 @@ public interface PermissionRepo extends JpaRepository<PermissionEntity, Integer>
     List<String> findPermissionNamesByIds(List<Integer> ids);
 
     @Query("SELECT p FROM PermissionEntity p WHERE p.permissionId IN :ids")
-    List<PermissionDto> findPermissionDetailByIds(List<Integer> ids);
+    List<PermissionEntity> findPermissionDetailByIds(List<Integer> ids);
 }

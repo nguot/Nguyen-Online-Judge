@@ -18,7 +18,7 @@ public class CommonResponse<TResult> implements Serializable {
     @Serial
     private static final long serialVersionUID = 7594052194764993562L;
 
-    private Boolean isSuccessful;
+    private Boolean isSuccessfull;
     private TResult data;
     private String code;
     private String message;
@@ -62,7 +62,7 @@ public class CommonResponse<TResult> implements Serializable {
 
     public static <T> CommonResponse<T> result(boolean success, T data, String code, String message) {
         return CommonResponse.<T>builder()
-                .isSuccessful(success)
+                .isSuccessfull(success)
                 .data(data)
                 .code(code)
                 .message(message)

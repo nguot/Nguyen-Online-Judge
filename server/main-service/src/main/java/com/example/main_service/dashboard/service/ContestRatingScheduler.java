@@ -2,6 +2,7 @@ package com.example.main_service.dashboard.service;
 
 import com.example.main_service.contest.model.ContestEntity;
 import com.example.main_service.contest.service.ContestService;
+import com.example.main_service.sharedAttribute.enums.ContestStatus;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -19,10 +20,7 @@ public class ContestRatingScheduler {
     private final ContestService contestService;
     private final ContestRatingService contestRatingService;
 
-    /**
-     * Poll mỗi 10 giây
-     */
-    @Scheduled(fixedDelay = 10_000)
+    @Scheduled(fixedDelay = 3 * 60 * 1000) // 600_000 ms
     @Transactional
     public void calculateRatingForFinishedContests() {
         LocalDateTime now = LocalDateTime.now();
@@ -43,6 +41,7 @@ public class ContestRatingScheduler {
                 contestRatingService.calculateRating(contest.getContestId());
 
                 contest.setRatingCalculated(true);
+                contest.setContestStatus(ContestStatus.FINISHED);
 
             } catch (Exception e) {
                 log.error(

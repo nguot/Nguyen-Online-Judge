@@ -75,6 +75,7 @@ public class DockerSandboxService {
                 default -> LanguageType.CPP;
             };
             String imageName = getDockerImageName(language);
+            log.info("===docker sandbox service====","imagename");
             int exitCode = executeDocker(
                     imageName,
                     solutionPath,
@@ -92,7 +93,12 @@ public class DockerSandboxService {
             result.setMemoryUsed(metrics.memoryUsedKb());
 
             // upload minio
-            String actualOutputFile = minioService.uploadLocalFile(outputFilePath, judgeId + "_actualOutput.txt");
+            String actualOutputFile = minioService.uploadLocalFile(
+                    outputFilePath,
+                    judgeId + "_" + testCaseId + "_actualOutput.txt"
+            );
+            result.setActualOutput(actualOutputFile);
+
 
             String errorMessage = Files.readString(errorFilePath).trim();
 

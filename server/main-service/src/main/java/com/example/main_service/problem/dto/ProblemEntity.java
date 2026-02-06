@@ -34,8 +34,8 @@ public class ProblemEntity {
     private Integer rating;
     private Integer score; // luu diem ma nguoi dung co the nhan duoc sau khi pass
 
-    private Double timeLimit; // giây
-    private Double memoryLimit;
+    private Integer timeLimit; // giây
+    private Integer memoryLimit;
 
     private String inputType;
 

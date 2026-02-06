@@ -1,13 +1,18 @@
 package com.example.main_service.rbac.model;
 
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Entity
 @Table(name = "role_user")
 @Builder
 @Data
+@NoArgsConstructor
+@AllArgsConstructor
+
 public class RoleUserEntity {
 
     @Id
@@ -18,7 +23,7 @@ public class RoleUserEntity {
     private Integer roleId;
 
     @Column(name = "user_id", nullable = false)
-    private Integer userId;
+    private Long userId;
 
     @Column(name = "scope_id")
     private String scopeId;

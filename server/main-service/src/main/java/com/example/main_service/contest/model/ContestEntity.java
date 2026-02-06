@@ -52,7 +52,31 @@ public class ContestEntity {
     @Column(name = "rating_calculated", nullable = false)
     private Boolean ratingCalculated = false;
 
-    public LocalDateTime getEndTime() {
-        return startTime.plusSeconds(duration);
+    public ContestStatus getContestStatus() {
+        // Nếu không có startTime thì không thể suy ra -> giữ giá trị đang lưu (nếu có), mặc định UPCOMING
+        if (this.startTime == null) {
+            return this.contestStatus != null ? this.contestStatus : ContestStatus.UPCOMING;
+        }
+
+        // duration null / <= 0: coi như contest chỉ “đến giờ là chạy”, không có end rõ ràng
+        // (tuỳ business m có thể đổi sang FINISHED luôn; ở đây chọn RUNNING khi đã tới giờ)
+        int dur = (this.duration == null ? 0 : this.duration);
+
+        LocalDateTime now = LocalDateTime.now();
+
+        // Chưa đến giờ bắt đầu
+        if (now.isBefore(this.startTime)) {
+            return ContestStatus.UPCOMING;
+        }
+
+        // Đã đến giờ bắt đầu
+        if (dur <= 0) {
+            return ContestStatus.RUNNING;
+        }
+
+        LocalDateTime endTime = this.startTime.plusSeconds(dur);
+
+        // now >= endTime => FINISHED, còn lại => RUNNING
+        return now.isBefore(endTime) ? ContestStatus.RUNNING : ContestStatus.FINISHED;
     }
 }

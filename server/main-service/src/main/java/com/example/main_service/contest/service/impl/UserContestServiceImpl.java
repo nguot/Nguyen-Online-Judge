@@ -1,7 +1,5 @@
 package com.example.main_service.contest.service.impl;
 
-import com.example.main_service.contest.dto.userContest.ContestParticipantFilterDto;
-import com.example.main_service.contest.dto.userContest.ContestParticipantResponseDto;
 import com.example.main_service.contest.dto.userContest.ContestRegistrationFilterDto;
 import com.example.main_service.contest.dto.userContest.ContestRegistrationResponseDto;
 import com.example.main_service.contest.service.ContestService;
@@ -9,12 +7,9 @@ import com.example.main_service.rbac.RoleService;
 import com.example.main_service.sharedAttribute.exceptions.ErrorCode;
 import com.example.main_service.sharedAttribute.exceptions.specException.ContestBusinessException;
 import com.example.main_service.contest.model.ContestEntity;
-import com.example.main_service.contest.model.ContestParticipantsEntity;
 import com.example.main_service.contest.model.ContestRegistrationEntity;
-import com.example.main_service.contest.repo.ContestParticipantsRepo;
 import com.example.main_service.contest.repo.ContestRegistrationRepo;
 import com.example.main_service.contest.repo.ContestRepo;
-import com.example.main_service.contest.repo.projections.ContestParticipantProjection;
 import com.example.main_service.contest.repo.projections.ContestRegistrationProjection;
 import com.example.main_service.contest.service.UserContestService;
 import com.example.main_service.sharedAttribute.commonDto.PageRequestDto;
@@ -49,10 +44,10 @@ public class UserContestServiceImpl implements UserContestService {
         Long userId = getUserIdOrThrow();
 
         if (contestService.isContestFinished(contestId)) {
-            //throw new ContestBusinessException(ErrorCode.CONTEST_ENDED);
+            throw new ContestBusinessException(ErrorCode.CONTEST_ENDED);
         }
 
-        //validateContestAccess(contest, roleService.hasSpecialContestRole(userId, contestId));
+        validateContestAccess(contest, roleService.hasSpecialContestRole(userId, contestId));
 
         if (contestRegistrationRepo.existsByContestIdAndUserId(contestId, userId)) {
             throw new ContestBusinessException(ErrorCode.CONTEST_ALREADY_REGISTERED);
@@ -82,7 +77,7 @@ public class UserContestServiceImpl implements UserContestService {
         }
 
         Page<ContestRegistrationProjection> page =
-                input.getFilter() != null
+                input.getFilter().getUserId() != null
                         ? contestRegistrationRepo.findByContestIdAndUserId(
                         contestId,
                         input.getFilter().getUserId(),

@@ -1,4 +1,4 @@
-package com.example.main_service.contest.dto.contestReviewer;
+package com.example.main_service.contest.dto.contest;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -22,7 +22,6 @@ public class ContestReviewerListResponseDto {
     public static class ContestReviewerItemDto {
         private Long userId;
         private String username;
-        private String fullName;
         private String email;
     }
 }

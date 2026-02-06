@@ -2,8 +2,11 @@ package com.example.main_service;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.kafka.annotation.EnableKafka;
+import org.springframework.cloud.openfeign.EnableFeignClients;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
+@EnableScheduling
+@EnableFeignClients
 @SpringBootApplication
 public class MainServiceApplication {
 

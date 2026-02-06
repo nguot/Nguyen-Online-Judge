@@ -16,13 +16,7 @@ public class ContestCreateUpdateRequestDto {
 
     private Integer duration;
 
-    @JsonProperty("contest_type")
-    private ContestType contestType;
+    private Long groupId;
 
     private Long rated;
-
-    private ContestVisibility visibility;
-
-    @JsonProperty("group_id")
-    private Long groupId;
 }

@@ -30,4 +30,5 @@ public interface DashBoardService {
             int offset,
             int limit
     );
+    DashBoardPageResponseDto getFriendsRanking(Long contestId, Long userId, int offset, int limit);
 }

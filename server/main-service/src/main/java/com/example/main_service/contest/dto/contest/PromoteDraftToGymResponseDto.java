@@ -13,10 +13,8 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @Builder
 public class PromoteDraftToGymResponseDto {
-    @JsonProperty("contest_id")
     private Long contestId;
 
-    @JsonProperty("new_type")
     private ContestType newType;
 
     private ContestVisibility visibility;

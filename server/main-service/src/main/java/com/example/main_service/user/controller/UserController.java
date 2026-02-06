@@ -13,6 +13,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+// làm trang user detail và rating hisotory
+
 @RestController
 @RequestMapping("/api/v1")
 @AllArgsConstructor
@@ -31,14 +33,15 @@ public class UserController {
         );
     }
 
-    @PutMapping("/admin/roles/{roleId}/permissions")
+    @PostMapping("/admin/roles/{roleId}/permissions")
     @PreAuthorize("@rbacService.hasPermission(authentication, 'rbac', 'SYSTEM', 0)")
-    public CommonResponse<Void> updateRolePermissions(
+    public CommonResponse<String> updateRolePermissions(
             @PathVariable Integer roleId,
             @RequestBody UpdateRolePermissionRequestDto request
     ) {
+        adminUserService.clearRolePermissions(roleId);
         adminUserService.updateRolePermissions(roleId, request);
-        return CommonResponse.success();
+        return CommonResponse.success("permissions for role " + roleId + " update successfully");
     }
 
     @PostMapping("/admin/users/search")
@@ -51,25 +54,26 @@ public class UserController {
         );
     }
 
-    // Thay role user
+    // Thay role user => ADMIN, PRO USER, USER only => scope auto 0 và type = SYSTEM
     @PostMapping("/admin/users/{userId}/role")
     @PreAuthorize("@rbacService.hasPermission(authentication, 'rbac', 'SYSTEM', 0)")
-    public CommonResponse<Void> updateUserRole(
-            @PathVariable Integer userId,
+    public CommonResponse<String> updateUserRole(
+            @PathVariable Long userId,
             @RequestBody UpdateUserRoleRequestDto request
     ) {
+        adminUserService.clearRoleUserSystem(userId);
         adminUserService.updateUserRole(userId, request);
-        return CommonResponse.success();
+        return CommonResponse.success("update role successfully");
     }
 
     // Admin chỉnh rating user (manual override)
     @PostMapping("/admin/users/{userId}/rating")
-    public CommonResponse<Void> updateUserRating(
-            @PathVariable Integer userId,
+    public CommonResponse<String> updateUserRating(
+            @PathVariable Long userId,
             @RequestBody UpdateUserRatingRequestDto request
     ) {
         adminUserService.updateUserRating(userId, request);
-        return CommonResponse.success();
+        return CommonResponse.success("update rating successfully");
     }
 
     /// /////user////////
@@ -79,9 +83,26 @@ public class UserController {
     }
 
     @GetMapping("/user/rating-history/{user_id}")
-    public CommonResponse<List<UserContestRatingHistoryItemDto>> getMyRatingHistory(
+    public CommonResponse<List<UserContestRatingHistoryItemDto>> getRatingHistory(
             @PathVariable("user_id") Long userId
     ) {
+        List<UserContestRatingHistoryItemDto> list =
+                userService.getUserRatingHistory(userId);
+
+        list.forEach(item -> System.out.println(item));
+
+        System.out.println(userService.getUserRatingHistory(userId).size());
         return CommonResponse.success(userService.getUserRatingHistory(userId));
     }
+
+    @PostMapping("/users/search-prefix")
+    public CommonResponse<PageResult<UserPrefixItemDto>> searchUsersByPrefixPage(
+            @RequestBody PageRequestDto<UserPrefixFilterDto> request
+    ) {
+        return CommonResponse.success(
+                userService.searchUsersByPrefixPage(request)
+        );
+    }
+
+
 }

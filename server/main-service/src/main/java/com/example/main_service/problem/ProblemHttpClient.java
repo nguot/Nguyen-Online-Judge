@@ -2,34 +2,57 @@ package com.example.main_service.problem;
 
 import com.example.main_service.problem.dto.ProblemEntity;
 import com.example.main_service.problem.dto.ProblemInputDto;
-import com.example.main_service.problem.dto.TestcaseEntity;
+import com.example.main_service.sharedAttribute.commonDto.CommonResponse;
 import com.example.main_service.sharedAttribute.commonDto.PageRequestDto;
 import com.example.main_service.sharedAttribute.commonDto.PageResult;
-import com.example.main_service.sharedAttribute.enums.LanguageType;
-import com.example.main_service.sharedAttribute.enums.ProblemLevel;
-import com.example.proto.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import net.devh.boot.grpc.client.inject.GrpcClient;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.stream.Collectors;
-
-@Service
 @Slf4j
-@RequiredArgsConstructor
 @Service
 @RequiredArgsConstructor
 public class ProblemHttpClient {
-    private final JudgeProblemClient judge;
+
+    private final JudgeServiceProblemClient judge;
 
     public ProblemEntity addProblem(ProblemInputDto input) {
-        return judge.addProblem(input).getData();
+        return unwrap(judge.addProblem(input));
+    }
+
+    public ProblemEntity cloneProblem(ProblemInputDto input) {
+        return unwrap(judge.cloneProblem(input));
     }
 
     public PageResult<ProblemEntity> getProblemPage(PageRequestDto<ProblemInputDto> input) {
-        return judge.getProblemPage(input).getData();
+        return unwrap(judge.getProblemPage(input));
+    }
+
+    public ProblemEntity getProblemById(String problemId) {
+        return unwrap(judge.getProblemById(problemId));
+    }
+
+    public ProblemEntity updateProblem(ProblemInputDto input, String problemId) {
+        return unwrap(judge.updateProblem(input, problemId));
+    }
+
+    public PageResult<ProblemEntity> getProblemByContest(PageRequestDto<Long> input) {
+        return unwrap(judge.getProblemByContest(input));
+    }
+
+    public PageResult<ProblemEntity> searchProblem(PageRequestDto<String> input) {
+        return unwrap(judge.searchProblem(input));
+    }
+
+    public ProblemEntity deleteProblem(String problemId) {
+        return unwrap(judge.deleteProblem(problemId));
+    }
+
+    private static <T> T unwrap(CommonResponse<T> res) {
+        if (res == null) return null;
+        if (Boolean.FALSE.equals(res.getIsSuccessfull())) {
+            throw new RuntimeException(res.getMessage());
+        }
+        return res.getData();
     }
 }

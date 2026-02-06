@@ -126,7 +126,33 @@ services:
     volumes:
       - redis-data:/data
     restart: always
+  kafka:
+    image: apache/kafka:3.8.1
+    container_name: oj-kafka
+    restart: unless-stopped
+    ports:
+      - "9092:9092"
+    environment:
+      # KRaft single-node
+      KAFKA_NODE_ID: "1"
+      KAFKA_PROCESS_ROLES: "broker,controller"
+      KAFKA_CONTROLLER_QUORUM_VOTERS: "1@oj-kafka:9093"
 
+      # Listeners: internal + external
+      KAFKA_LISTENERS: "PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093"
+      KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://localhost:9092"
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT"
+      KAFKA_CONTROLLER_LISTENER_NAMES: "CONTROLLER"
+      KAFKA_INTER_BROKER_LISTENER_NAME: "PLAINTEXT"
+
+      # Single node replication settings
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: "1"
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: "1"
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: "1"
+      KAFKA_MIN_INSYNC_REPLICAS: "1"
+
+    networks:
+      - oj-judge-service-network
 volumes:
   oj_mongodb_data:
   oj_mysql_data:
@@ -137,6 +163,7 @@ volumes:
       o: bind
       device: ./data/minio
   redis-data:
+  kafka-data:
 
 networks:
   oj-judge-service-network:

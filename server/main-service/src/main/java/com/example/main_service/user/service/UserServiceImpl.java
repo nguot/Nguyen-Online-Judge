@@ -1,8 +1,12 @@
 package com.example.main_service.user.service;
 
 import com.example.main_service.dashboard.dtos.UserContestRatingHistoryItemDto;
+import com.example.main_service.sharedAttribute.commonDto.PageRequestDto;
+import com.example.main_service.sharedAttribute.commonDto.PageResult;
 import com.example.main_service.sharedAttribute.exceptions.specException.UserBusinessException;
 import com.example.main_service.user.dto.UserDetailDto;
+import com.example.main_service.user.dto.UserPrefixFilterDto;
+import com.example.main_service.user.dto.UserPrefixItemDto;
 import com.example.main_service.user.model.UserEntity;
 import com.example.main_service.user.model.UserRatingHistoryEntity;
 import com.example.main_service.user.repo.UserRatingHistoryRepo;
@@ -11,6 +15,8 @@ import com.example.main_service.sharedAttribute.exceptions.ErrorCode;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -98,5 +104,35 @@ public class UserServiceImpl implements UserService {
                         row -> (String) row[1]
                 ));
     }
+
+    @Override
+    public PageResult<UserPrefixItemDto> searchUsersByPrefixPage(PageRequestDto<UserPrefixFilterDto> request) {
+        String prefix = request != null && request.getFilter() != null
+                ? request.getFilter().getPrefix()
+                : null;
+
+        if (prefix == null) prefix = "";
+        prefix = prefix.trim();
+//        if (prefix.isEmpty()) {
+//            PageResult<UserPrefixItemDto> empty = new PageResult<>();
+//            empty.setTotalCount(0);
+//            empty.setData(List.of());
+//            return empty;
+//        }
+
+        PageRequest pr = request.getPageRequest();
+        Page<UserEntity> page = userRepo.searchByUsernamePrefix(prefix.toLowerCase(), pr);
+
+        PageResult<UserPrefixItemDto> res = new PageResult<>();
+        res.setTotalCount(page.getTotalElements());
+        res.setData(page.getContent().stream()
+                .map(u -> new UserPrefixItemDto(
+                        u.getUserId(),
+                        u.getUserName()
+                ))
+                .toList());
+        return res;
+    }
+
 
 }

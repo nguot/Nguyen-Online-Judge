@@ -14,6 +14,7 @@ import com.example.jude_service.exceptions.specException.SubmissionBusinessExcep
 import com.example.jude_service.repo.ProblemRepo;
 import com.example.jude_service.repo.SubmissionRepo;
 import com.example.jude_service.services.JudgeService;
+import com.example.jude_service.services.SubmissionJudgeAsyncService;
 import com.example.jude_service.services.SubmissionService;
 import com.example.jude_service.utils.StringUtils;
 import lombok.RequiredArgsConstructor;
@@ -34,6 +35,7 @@ public class SubmissionServiceImpl implements SubmissionService {
     private final ProblemRepo problemRepo;
     private final MongoTemplate mongoTemplate;
     private final JudgeService judgeService;
+    private final SubmissionJudgeAsyncService submissionJudgeAsyncService;
 
     @Override
     @Transactional(rollbackFor = {SubmissionBusinessException.class, ProblemBusinessException.class, IOException.class})
@@ -53,26 +55,20 @@ public class SubmissionServiceImpl implements SubmissionService {
         }
 
         try {
-            JudgeResult judgeResult = judgeService.judge(input, input.getProblemId());
-            List<SubmissionResultEntity> results = judgeResult.getTestCaseResults().stream()
-                    .map(this::convertToSubmissionResult)
-                    .collect(Collectors.toList());
-
-            SubmissionEntity entity = SubmissionEntity.builder()
+            SubmissionEntity draft = SubmissionEntity.builder()
                     .problemId(input.getProblemId())
                     .contestId(input.getContestId())
                     .userId(input.getUserId())
                     .sourceCode(input.getSourceCode())
                     .language(input.getLanguage())
-                    .result(results)
+                    .result(List.of())
                     .build();
+            SubmissionEntity savedDraft = submissionRepo.save(draft); // de ban trang thai từng test case một
 
-            SubmissionEntity savedEntity = submissionRepo.save(entity);
-            return CommonResponse.success(savedEntity,
-                    String.format("Submission judged: %s (%d/%d passed)",
-                            judgeResult.getFinalVerdict(),
-                            judgeResult.getPassedTestCases(),
-                            judgeResult.getTotalTestCases()));
+            submissionJudgeAsyncService.judgeAndUpdate(savedDraft.getSubmissionId(), input);
+
+            return CommonResponse.success(savedDraft, "Submission received, judging started");
+
         } catch (Exception e) {
             throw new SubmissionBusinessException(
                     ErrorCode.INTERNAL_SERVER_ERROR,
@@ -143,30 +139,24 @@ public class SubmissionServiceImpl implements SubmissionService {
         return CommonResponse.success();
     }
 
-    private static void submit() {
-
-    }
 
     private Query filter(PageRequestDto<SubmissionInputDto> pageRequest) {
         Query query = new Query();
         SubmissionInputDto request = pageRequest.getFilter();
 
         if (!StringUtils.isNullOrEmpty(request.getProblemId())) {
-            System.out.println("======problemId====" + request.getProblemId());
             query.addCriteria(
                     Criteria.where("problemId").is(request.getProblemId())
             );
         }
 
         if (request.getUserId() != null &&  request.getUserId()!=0) {
-            System.out.println("======userId====" + request.getUserId());
             query.addCriteria(
                     Criteria.where("userId").is(request.getUserId())
             );
         }
 
         if (request.getContestId() != null && request.getContestId()!=0) {
-            System.out.println("======contestId====" + request.getContestId());
             query.addCriteria(
                     Criteria.where("contestId").is(request.getContestId())
             );
@@ -175,7 +165,6 @@ public class SubmissionServiceImpl implements SubmissionService {
         if (request.getLanguage() != null) {
             query.addCriteria(Criteria.where("language").is(request.getLanguage()));
         }
-        System.out.println("======asdjaskldjsakldjaslk====" + query);
         return query;
     }
 }

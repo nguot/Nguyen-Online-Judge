@@ -11,13 +11,12 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class SubmissionProgressProducer {
 
-    private final KafkaTemplate<Object, Object> kafkaTemplate;
+    private final KafkaTemplate<String, String> kafkaTemplate;
     private final ObjectMapper mapper = new ObjectMapper();
 
-    // tao instance cua cai nay xong log
-    public void send(String submissionId, int current, int total) {
+    public void send(String submissionId, int current, int total,String status) {
         try {
-            kafkaTemplate.send(
+            var r = kafkaTemplate.send(
                     "submission.progress",
                     submissionId,
                     mapper.writeValueAsString(
@@ -25,11 +24,38 @@ public class SubmissionProgressProducer {
                                     "submissionId", submissionId,
                                     "currentTest", current,
                                     "totalTests", total,
-                                    "status", "RUNNING"
+                                    "status", status
                             )
                     )
             );
+            var result = r.get();
+            System.out.println("sent " + result.getRecordMetadata());
             System.out.println("submission.progress topic ==== " + submissionId + " ==== " + current + " ===== " + total);
         } catch (Exception ignored) {}
     }
+    public void send(
+            String submissionId,
+            int current,
+            int total,
+            String status,
+            Map<String, Object> extra
+    ) {
+        try {
+            Map<String, Object> base = new java.util.HashMap<>();
+            base.put("submissionId", submissionId);
+            base.put("currentTest", current);
+            base.put("totalTests", total);
+            base.put("status", status);
+
+            if (extra != null) base.putAll(extra);
+
+            var r = kafkaTemplate.send(
+                    "submission.progress",
+                    submissionId,
+                    mapper.writeValueAsString(base)
+            );
+            r.get();
+        } catch (Exception ignored) {}
+    }
+
 }

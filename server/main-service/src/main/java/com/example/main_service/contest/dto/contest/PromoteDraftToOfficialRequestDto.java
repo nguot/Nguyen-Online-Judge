@@ -10,4 +10,6 @@ public class PromoteDraftToOfficialRequestDto {
     private Long rated; //rated hay k
 
     private LocalDateTime startTime;
+
+    private Integer duration;
 }

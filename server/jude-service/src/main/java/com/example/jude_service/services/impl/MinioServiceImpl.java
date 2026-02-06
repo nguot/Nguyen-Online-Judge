@@ -9,7 +9,10 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.nio.file.Files;
 
@@ -101,4 +104,60 @@ public class MinioServiceImpl implements MinioService {
             throw new RuntimeException(e);
         }
     }
+
+    @Override
+    public byte[] readFileBytes(String objectName, long maxBytes) {
+        if (StringUtils.isNullOrBlank(objectName)) {
+            throw new IllegalArgumentException("Object name is empty");
+        }
+        if (maxBytes <= 0) {
+            throw new IllegalArgumentException("maxBytes must be > 0");
+        }
+
+        try (InputStream in = minioClient.getObject(
+                GetObjectArgs.builder()
+                        .bucket(bucketName)
+                        .object(objectName)
+                        .build()
+        )) {
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+
+            byte[] buf = new byte[8192];
+            long total = 0;
+
+            int n;
+            while ((n = in.read(buf)) != -1) {
+                total += n;
+                if (total > maxBytes) {
+                    throw new IllegalArgumentException("File too large (>" + maxBytes + " bytes)");
+                }
+                out.write(buf, 0, n);
+            }
+            return out.toByteArray();
+        } catch (Exception e) {
+            log.error("error on read file bytes: {}", objectName, e);
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public String readFileAsString(String objectName, Charset charset, long maxBytes) {
+        if (charset == null) charset = StandardCharsets.UTF_8;
+        byte[] bytes = readFileBytes(objectName, maxBytes);
+        return new String(bytes, charset);
+    }
+
+    public InputStream getObjectStream(String objectName) {
+        try {
+            return minioClient.getObject(
+                    GetObjectArgs.builder()
+                            .bucket(bucketName)
+                            .object(objectName)
+                            .build()
+            );
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
 }

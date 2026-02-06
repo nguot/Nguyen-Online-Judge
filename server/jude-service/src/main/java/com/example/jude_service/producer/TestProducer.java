@@ -14,7 +14,7 @@ public class TestProducer {
 
     @GetMapping("/test/send")
     public ResponseEntity<String> testKafkaSend() {
-        producer.send("abc123", 3, 10);
+        producer.send("abc123", 3, 10,"gay");
         return ResponseEntity.ok("Sent!");
     }
 }

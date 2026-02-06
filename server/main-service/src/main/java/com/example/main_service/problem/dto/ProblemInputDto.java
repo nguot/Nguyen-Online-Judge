@@ -2,11 +2,18 @@ package com.example.main_service.problem.dto;
 
 import com.example.main_service.sharedAttribute.enums.LanguageType;
 import com.example.main_service.sharedAttribute.enums.ProblemLevel;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.util.List;
 
 @Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+
 public class ProblemInputDto { // thieu problemId so voi problem entity
 
     private String title;
