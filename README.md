@@ -1,1 +1,1 @@
-check the 'frontend' branch for full code
+check the 'code' branch for full frontend + backend
